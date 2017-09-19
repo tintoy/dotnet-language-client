@@ -1,10 +1,10 @@
 ﻿using Lsp.Models;
 using System;
 
-namespace LSP.Client.ClientApis
+namespace LSP.Client.Clients
 {
     /// <summary>
-    ///     Client for the LSP window API.
+    ///     Client for the LSP Window API.
     /// </summary>
     public class WindowClient
     {

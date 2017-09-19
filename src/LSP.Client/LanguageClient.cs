@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace LSP.Client
 {
-    using ClientApis;
+    using Clients;
     using Dispatcher;
     using Handlers;
     using Lsp.Capabilities.Client;
@@ -64,6 +64,7 @@ namespace LSP.Client
             _serverStartInfo = serverStartInfo;
             Workspace = new WorkspaceClient(this);
             Window = new WindowClient(this);
+            TextDocument = new TextDocumentClient(this);
         }
 
         /// <summary>
@@ -84,12 +85,17 @@ namespace LSP.Client
         }
 
         /// <summary>
-        ///     The LSP window API.
+        ///     The LSP Text Document API.
+        /// </summary>
+        public TextDocumentClient TextDocument { get; }
+
+        /// <summary>
+        ///     The LSP Window API.
         /// </summary>
         public WindowClient Window { get; }
 
         /// <summary>
-        ///     The LSP workspace API.
+        ///     The LSP Workspace API.
         /// </summary>
         public WorkspaceClient Workspace { get; }
 
@@ -100,9 +106,21 @@ namespace LSP.Client
         {
             Workspace = new WorkspaceClientCapabilites
             {
+                DidChangeConfiguration = new DidChangeConfigurationCapability
+                {
+                    DynamicRegistration = false
+                }
             },
             TextDocument = new TextDocumentClientCapabilities
             {
+                Synchronization = new SynchronizationCapability
+                {
+                    DynamicRegistration = false
+                },
+                Hover = new HoverCapability
+                {
+                    DynamicRegistration = false
+                }
             }
         };
 

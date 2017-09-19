@@ -1,10 +1,10 @@
 ﻿using Newtonsoft.Json.Linq;
 using System;
 
-namespace LSP.Client.ClientApis
+namespace LSP.Client.Clients
 {
     /// <summary>
-    ///     Client for the LSP workspace API.
+    ///     Client for the LSP Workspace API.
     /// </summary>
     public class WorkspaceClient
     {
