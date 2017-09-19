@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json.Linq;
 using System;
 
-namespace LspClient
+namespace LSP.Client.Handlers
 {
     /// <summary>
     ///     A delegate-based handler for notifications.

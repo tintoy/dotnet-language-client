@@ -5,8 +5,10 @@ using System.Reactive.Disposables;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LspClient
+namespace LSP.Client.Dispatcher
 {
+    using Handlers;
+
     /// <summary>
     ///     Dispatches requests and notifications from a language server to a language client.
     /// </summary>

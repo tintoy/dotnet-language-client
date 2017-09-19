@@ -1,7 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 
-namespace LspClient
+namespace LSP.Client
 {
     /// <summary>
     ///     A handler for empty notifications.

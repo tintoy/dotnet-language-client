@@ -2,19 +2,18 @@
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 
-namespace LspClient
+namespace LSP.Client.Protocol
 {
     /// <summary>
-    ///     The client-side representation of an LSP message.
+    ///     The server-side representation of an LSP message.
     /// </summary>
     [JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
-    public class ClientMessage
+    public class ServerMessage
     {
         /// <summary>
         ///     The JSON-RPC protocol version.
         /// </summary>
-        [JsonProperty("jsonrpc")]
-        public string ProtocolVersion => "2.0";
+        public string ProtocolVersion { get; set; } = "2.0";
 
         /// <summary>
         ///     The request / response Id, if the message represents a request or a response.

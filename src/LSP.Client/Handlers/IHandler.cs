@@ -1,4 +1,4 @@
-﻿namespace LspClient
+﻿namespace LSP.Client.Handlers
 {
     /// <summary>
     ///     Represents a client-side message handler.

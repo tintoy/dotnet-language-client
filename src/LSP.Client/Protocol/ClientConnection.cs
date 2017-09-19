@@ -9,17 +9,26 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LspClient
+namespace LSP.Client.Protocol
 {
+    using Dispatcher;
+    using Handlers;
+
     /// <summary>
     ///     A client-side LSP connection.
     /// </summary>
-    public class ClientConnection
+    public sealed class ClientConnection
+        : IDisposable
     {
         /// <summary>
         ///     Minimum size of the buffer for receiving headers ("Content-Length: X\r\n\r\n").
         /// </summary>
         const short MinimumHeaderLength = 21;
+
+        /// <summary>
+        ///     The length of time to wait for the outgoing message queue to drain.
+        /// </summary>
+        public static readonly TimeSpan FlushTimeout = TimeSpan.FromSeconds(5);
 
         /// <summary>
         ///     The queue of outgoing requests.
@@ -74,7 +83,7 @@ namespace LspClient
         /// <summary>
         ///     A <see cref="Task"/> representing the stopping of the connection's send, receive, and dispatch loops.
         /// </summary>
-        Task _hasStoppedTask = Task.CompletedTask;
+        Task _hasClosedTask = Task.CompletedTask;
 
         /// <summary>
         ///     A <see cref="Task"/> representing the connection's receive loop.
@@ -137,9 +146,22 @@ namespace LspClient
         }
 
         /// <summary>
-        ///     A task that completes when the connection is stopped.
+        ///     Dispose of resources being used by the connection.
         /// </summary>
-        public Task HasStopped => _hasStoppedTask;
+        public void Dispose()
+        {
+            Close();
+        }
+
+        /// <summary>
+        ///     Is the connection open?
+        /// </summary>
+        public bool IsOpen => _sendLoop != null || _receiveLoop != null || _dispatchLoop != null;
+
+        /// <summary>
+        ///     A task that completes when the connection is closed.
+        /// </summary>
+        public Task HasClosed => _hasClosedTask;
 
         /// <summary>
         ///     Register a message handler.
@@ -153,24 +175,50 @@ namespace LspClient
         public IDisposable RegisterHandler(IHandler handler) => _dispatcher.RegisterHandler(handler);
 
         /// <summary>
-        ///     Start the connection.
+        ///     Open the connection.
         /// </summary>
-        public void Start()
+        public void Open()
         {
             _cancellationSource = new CancellationTokenSource();
             _cancellation = _cancellationSource.Token;
             _sendLoop = SendLoop();
             _receiveLoop = ReceiveLoop();
             _dispatchLoop = DispatchLoop();
-            _hasStoppedTask = Task.WhenAll(_sendLoop, _receiveLoop, _dispatchLoop);
+            _hasClosedTask = Task.WhenAll(_sendLoop, _receiveLoop, _dispatchLoop);
         }
 
         /// <summary>
-        ///     Stop the connection.
+        ///     Close the connection.
         /// </summary>
-        public void Stop()
+        /// <param name="flushOutgoing">
+        ///     If <c>true</c>, stop receiving and block until all outgoing messages have been sent.
+        /// </param>
+        public void Close(bool flushOutgoing = false)
         {
-            _cancellationSource.Cancel();
+            if (flushOutgoing)
+            {
+                // TODO: Drain the outgoing message queue.
+                _incoming.CompleteAdding();
+
+                int remainingMessageCount = 0;
+                DateTime then = DateTime.Now;
+                while (DateTime.Now - then < FlushTimeout)
+                {
+                    remainingMessageCount = _outgoing.Count;
+                    if (remainingMessageCount == 0)
+                        break;
+
+                    Thread.Sleep(
+                        TimeSpan.FromMilliseconds(200)
+                    );
+                }
+
+                if (remainingMessageCount > 0)
+                    Log.Warning("Failed to flush outgoing messages ({RemainingMessageCount} messages remaining).", _outgoing.Count);
+            }
+
+            _cancellationSource?.Cancel();
+            _cancellationSource = null;
             _sendLoop = null;
             _receiveLoop = null;
             _dispatchLoop = null;
@@ -375,7 +423,7 @@ namespace LspClient
 
             try
             {
-                while (!_cancellation.IsCancellationRequested)
+                while (!_cancellation.IsCancellationRequested && !_incoming.IsAddingCompleted)
                 {
                     Log.Verbose("Reading response headers...");
 

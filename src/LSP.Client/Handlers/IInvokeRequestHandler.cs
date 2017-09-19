@@ -2,7 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LspClient
+namespace LSP.Client.Handlers
 {
     /// <summary>
     ///     Represents a handler for requests.

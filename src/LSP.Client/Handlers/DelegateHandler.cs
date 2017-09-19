@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace LspClient
+namespace LSP.Client.Handlers
 {
     /// <summary>
     ///     The base class for delegate-based message handlers .
