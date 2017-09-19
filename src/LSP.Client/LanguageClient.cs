@@ -63,6 +63,7 @@ namespace LSP.Client
 
             _serverStartInfo = serverStartInfo;
             Workspace = new WorkspaceClient(this);
+            Window = new WindowClient(this);
         }
 
         /// <summary>

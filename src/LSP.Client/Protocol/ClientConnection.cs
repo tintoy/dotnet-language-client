@@ -42,6 +42,11 @@ namespace LSP.Client.Protocol
         readonly BlockingCollection<ServerMessage> _incoming = new BlockingCollection<ServerMessage>(new ConcurrentQueue<ServerMessage>());
 
         /// <summary>
+        ///     <see cref="CancellationTokenSource"/>s representing cancellation of requests from the language server (keyed by request Id).
+        /// </summary>
+        readonly ConcurrentDictionary<object, CancellationTokenSource> _requestCancellations = new ConcurrentDictionary<object, CancellationTokenSource>();
+
+        /// <summary>
         ///     <see cref="TaskCompletionSource{TResult}"/>s representing completion of responses from the language server (keyed by request Id).
         /// </summary>
         readonly ConcurrentDictionary<int, TaskCompletionSource<ServerMessage>> _responseCompletions = new ConcurrentDictionary<int, TaskCompletionSource<ServerMessage>>();
@@ -296,9 +301,19 @@ namespace LSP.Client.Protocol
             int requestId = Interlocked.Increment(ref _nextRequestId);
 
             TaskCompletionSource<ServerMessage> completion = new TaskCompletionSource<ServerMessage>(state: requestId);
-            cancellationToken.Register(
-                () => completion.TrySetCanceled(cancellationToken)
-            );
+            cancellationToken.Register(() =>
+            {
+                completion.TrySetCanceled(cancellationToken);
+
+                // Send notification telling server to cancel the request, if possible.
+                _outgoing.TryAdd(new ClientMessage
+                {
+                    Method = "$/cancelRequest",
+                    Params = new JObject(
+                        new JProperty("id", requestId)
+                    )
+                });
+            });
 
             _responseCompletions.TryAdd(requestId, completion);
 
@@ -324,13 +339,13 @@ namespace LSP.Client.Protocol
         /// <param name="request">
         ///     The request message.
         /// </param>
-        /// <param name="cancellation">
+        /// <param name="cancellationToken">
         ///     An optional cancellation token that can be used to cancel the request.
         /// </param>
         /// <returns>
         ///     A <see cref="Task{TResult}"/> representing the response.
         /// </returns>
-        public async Task<TResponse> SendRequest<TResponse>(string method, object request, CancellationToken cancellation = default(CancellationToken))
+        public async Task<TResponse> SendRequest<TResponse>(string method, object request, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (String.IsNullOrWhiteSpace(method))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(method)}.", nameof(method));
@@ -341,9 +356,19 @@ namespace LSP.Client.Protocol
             int requestId = Interlocked.Increment(ref _nextRequestId);
 
             TaskCompletionSource<ServerMessage> completion = new TaskCompletionSource<ServerMessage>(state: requestId);
-            cancellation.Register(
-                () => completion.TrySetCanceled(cancellation)
-            );
+            cancellationToken.Register(() =>
+            {
+                completion.TrySetCanceled(cancellationToken);
+
+                // Send notification telling server to cancel the request, if possible.
+                _outgoing.TryAdd(new ClientMessage
+                {
+                    Method = "$/cancelRequest",
+                    Params = new JObject(
+                        new JProperty("id", requestId)
+                    )
+                });
+            });
 
             _responseCompletions.TryAdd(requestId, completion);
 
@@ -597,76 +622,15 @@ namespace LSP.Client.Protocol
                     if (message.Id != null)
                     {
                         // Request.
-                        Log.Information("Dispatching incoming {RequestMethod} request {RequestId}...", message.Method, message.Id);
-
-                        Task<object> handlerTask = _dispatcher.TryHandleRequest(message.Method, message.Params, _cancellation);
-                        if (handlerTask == null)
-                        {
-                            Log.Warning("Unable to dispatch incoming {RequestMethod} request {RequestId} (no handler registered).", message.Method, message.Id);
-
-                            _outgoing.TryAdd(
-                                new JsonRpc.Server.Messages.MethodNotFound(message.Id)
-                            );
-                        }
-
-                        object result;
-                        try
-                        {
-                            result = await handlerTask;
-                        }
-                        catch (Exception handlerError)
-                        {
-                            Log.Error(handlerError, "Unable to dispatch incoming {RequestMethod} request {RequestId} (unexpected error raised by handler).", message.Method, message.Id);
-                            _outgoing.TryAdd(new JsonRpc.Error(
-                                message.Id,
-                                new JsonRpc.Server.Messages.ErrorMessage(
-                                    code: 500,
-                                    message: "Error processing request: " + handlerError.Message,
-                                    data: handlerError.ToString()
-                                )
-                            ));
-
-                            continue;
-                        }
-
-                        _outgoing.TryAdd(new ClientMessage
-                        {
-                            Id = message.Id,
-                            Method = message.Method,
-                            Result = result != null ? JObject.FromObject(result) : null
-                        });
-
-                        Log.Information("Dispatched incoming {RequestMethod} request {RequestId} (Result = {@Result}).", message.Method, message.Id, result);
+                        if (message.Method == "$/cancelRequest")
+                            CancelRequest(message);
+                        else
+                            DispatchRequest(message);
                     }
                     else
                     {
                         // Notification.
-                        Log.Information("Dispatching incoming {NotificationMethod} notification...", message.Method);
-
-                        bool handled;
-
-                        try
-                        {
-                            if (message.Params != null)
-                                handled = _dispatcher.TryHandleEmptyNotification(message.Method);
-                            else
-                                handled = _dispatcher.TryHandleNotification(message.Method, message.Params);
-                        }
-                        catch (Exception handlerError)
-                        {
-                            Log.Error(handlerError, "Unable to dispatch incoming {NotificationMethod} notification (unexpected error raised by handler).", message.Method);
-
-                            continue;
-                        }
-
-                        if (!handled)
-                        {
-                            Log.Warning("Unable to dispatch incoming {NotificationMethod} notification (no handler registered).", message.Method);
-
-                            continue;
-                        }
-                        else
-                            Log.Information("Dispatched incoming {NotificationMethod} notification.", message.Method);
+                        DispatchNotification(message);
                     }
                 }
             }
@@ -676,6 +640,135 @@ namespace LSP.Client.Protocol
                 if (operationCanceled.CancellationToken != _cancellation)
                     throw;
             }
+        }
+
+        /// <summary>
+        ///     Dispatch a request.
+        /// </summary>
+        /// <param name="requestMessage">
+        ///     The request message.
+        /// </param>
+        private void DispatchRequest(ServerMessage requestMessage)
+        {
+            Log.Information("Dispatching incoming {RequestMethod} request {RequestId}...", requestMessage.Method, requestMessage.Id);
+
+            CancellationTokenSource requestCancellation = CancellationTokenSource.CreateLinkedTokenSource(_cancellation);
+            _requestCancellations.TryAdd(requestMessage.Id, requestCancellation);
+
+            Task<object> handlerTask = _dispatcher.TryHandleRequest(requestMessage.Method, requestMessage.Params, requestCancellation.Token);
+            if (handlerTask == null)
+            {
+                Log.Warning("Unable to dispatch incoming {RequestMethod} request {RequestId} (no handler registered).", requestMessage.Method, requestMessage.Id);
+
+                _outgoing.TryAdd(
+                    new JsonRpc.Server.Messages.MethodNotFound(requestMessage.Id)
+                );
+            }
+
+#pragma warning disable CS4014 // Continuation does the work we need; no need to await it as this would tie up the dispatch loop.
+            handlerTask.ContinueWith(_ =>
+            {
+                if (handlerTask.IsCanceled)
+                    Log.Verbose("{RequestMethod} request {RequestId} canceled.", requestMessage.Method, requestMessage.Id);
+                else if (handlerTask.IsFaulted)
+                {
+                    Exception handlerError = handlerTask.Exception.Flatten().InnerExceptions[0];
+
+                    Log.Error(handlerError, "{RequestMethod} request {RequestId} failed (unexpected error raised by handler).", requestMessage.Method, requestMessage.Id);
+
+                    _outgoing.TryAdd(new JsonRpc.Error(
+                        requestMessage.Id,
+                        new JsonRpc.Server.Messages.ErrorMessage(
+                            code: 500,
+                            message: "Error processing request: " + handlerError.Message,
+                            data: handlerError.ToString()
+                        )
+                    ));
+                }
+                else if (handlerTask.IsCompleted)
+                {
+                    Log.Information("{RequestMethod} request {RequestId} complete (Result = {@Result}).", requestMessage.Method, requestMessage.Id, handlerTask.Result);
+
+                    _outgoing.TryAdd(new ClientMessage
+                    {
+                        Id = requestMessage.Id,
+                        Method = requestMessage.Method,
+                        Result = handlerTask.Result != null ? JObject.FromObject(handlerTask.Result) : null
+                    });
+                }
+
+                _requestCancellations.TryRemove(requestMessage.Id, out CancellationTokenSource cancellation);
+                cancellation.Dispose();
+            });
+#pragma warning restore CS4014 // Continuation does the work we need; no need to await it as this would tie up the dispatch loop.
+
+            Log.Information("Dispatched incoming {RequestMethod} request {RequestId}.", requestMessage.Method, requestMessage.Id);
+        }
+
+        /// <summary>
+        ///     Cancel a request.
+        /// </summary>
+        /// <param name="requestMessage">
+        ///     The request message.
+        /// </param>
+        void CancelRequest(ServerMessage requestMessage)
+        {
+            if (requestMessage == null)
+                throw new ArgumentNullException(nameof(requestMessage));
+
+            object cancelRequestId = requestMessage.Params?.Value<object>("id");
+            if (cancelRequestId != null)
+            {
+                if (_requestCancellations.TryRemove(cancelRequestId, out CancellationTokenSource requestCancellation))
+                {
+                    Log.Verbose("Cancel request {RequestId}", requestMessage.Id);
+                    requestCancellation.Cancel();
+                    requestCancellation.Dispose();
+                }
+                else
+                    Log.Verbose("Received cancellation message for non-existent (or already-completed) request ");
+            }
+            else
+                Log.Warning("Received invalid request cancellation message {MessageId} (missing 'id' parameter).", requestMessage.Id);
+        }
+
+        /// <summary>
+        ///     Dispatch a notification message.
+        /// </summary>
+        /// <param name="notificationMessage">
+        ///     
+        /// </param>
+        void DispatchNotification(ServerMessage notificationMessage)
+        {
+            if (notificationMessage == null)
+                throw new ArgumentNullException(nameof(notificationMessage));
+
+            Log.Information("Dispatching incoming {NotificationMethod} notification...", notificationMessage.Method);
+
+            bool handled;
+
+            try
+            {
+                if (notificationMessage.Params != null)
+                    handled = _dispatcher.TryHandleEmptyNotification(notificationMessage.Method);
+                else
+                    handled = _dispatcher.TryHandleNotification(notificationMessage.Method, notificationMessage.Params);
+            }
+            catch (Exception handlerError)
+            {
+                Log.Error(handlerError, "Unable to dispatch incoming {NotificationMethod} notification (unexpected error raised by handler).", notificationMessage.Method);
+
+                return;
+            }
+
+            if (!handled)
+            {
+                Log.Warning("Unable to dispatch incoming {NotificationMethod} notification (no handler registered).", notificationMessage.Method);
+
+                return;
+            }
+            else
+                Log.Information("Dispatched incoming {NotificationMethod} notification.", notificationMessage.Method);
         }
     }
 }
