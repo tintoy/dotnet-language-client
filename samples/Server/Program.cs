@@ -3,6 +3,7 @@ using Lsp;
 using Serilog;
 using Serilog.Events;
 using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -22,18 +23,7 @@ namespace Server
                 new SynchronizationContext()
             );
 
-            Log.Logger =
-                new LoggerConfiguration()
-                    .MinimumLevel.Verbose()
-                    .Enrich.WithProperty("Source", "Server")
-                    .WriteTo.Debug(
-                        restrictedToMinimumLevel: LogEventLevel.Information
-                    )
-                    .WriteTo.Seq("http://localhost:5341/",
-                        apiKey: Environment.GetEnvironmentVariable("LSP_SEQ_API_KEY"),
-                        restrictedToMinimumLevel: LogEventLevel.Information
-                    )
-                    .CreateLogger();
+            ConfigureLogging();
 
             try
             {
@@ -86,6 +76,49 @@ namespace Server
             Log.Information("Waiting for shutdown...");
 
             await languageServer.WasShutDown;
+        }
+
+        /// <summary>
+        ///     Configure the global logger.
+        /// </summary>
+        static void ConfigureLogging()
+        {
+            LogEventLevel logLevel =
+                !String.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("LSP_VERBOSE_LOGGING"))
+                    ? LogEventLevel.Verbose
+                    : LogEventLevel.Information;
+
+            LoggerConfiguration loggerConfiguration =
+                new LoggerConfiguration()
+                    .MinimumLevel.Verbose()
+                    .Enrich.WithProperty("Source", "Server")
+                    .WriteTo.Debug(
+                        restrictedToMinimumLevel: logLevel
+                    );
+
+            string seqUrl = Environment.GetEnvironmentVariable("LSP_SEQ_URL");
+            if (!String.IsNullOrWhiteSpace(seqUrl))
+            {
+                loggerConfiguration = loggerConfiguration.WriteTo.Seq(seqUrl,
+                    apiKey: Environment.GetEnvironmentVariable("LSP_SEQ_API_KEY"),
+                    restrictedToMinimumLevel: logLevel
+                );
+            }
+
+            string logFile = Environment.GetEnvironmentVariable("LSP_LOG_FILE");
+            if (!String.IsNullOrWhiteSpace(logFile))
+            {
+                string logExtension = Path.GetExtension(logFile);
+                logFile = Path.GetFullPath(
+                    Path.ChangeExtension(logFile, ".Server" + logExtension)
+                );
+
+                loggerConfiguration = loggerConfiguration.WriteTo.File(logFile,
+                    restrictedToMinimumLevel: logLevel
+                );
+            }
+
+            Log.Logger = loggerConfiguration.CreateLogger();
         }
     }
 }

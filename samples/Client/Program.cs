@@ -34,18 +34,7 @@ namespace Client
                 new SynchronizationContext()
             );
 
-            Log.Logger =
-                new LoggerConfiguration()
-                    .MinimumLevel.Verbose()
-                    .Enrich.WithProperty("Source", "Client")
-                    .WriteTo.Debug(
-                        restrictedToMinimumLevel: LogEventLevel.Information
-                    )
-                    .WriteTo.Seq("http://localhost:5341/",
-                        apiKey: Environment.GetEnvironmentVariable("LSP_SEQ_API_KEY"),
-                        restrictedToMinimumLevel: LogEventLevel.Information
-                    )
-                    .CreateLogger();
+            ConfigureLogging();
 
             try
             {
@@ -119,6 +108,49 @@ namespace Client
                 await client.Stop();
                 Log.Information("Server stopped.");
             }
+        }
+
+        /// <summary>
+        ///     Configure the global logger.
+        /// </summary>
+        static void ConfigureLogging()
+        {
+            LogEventLevel logLevel =
+                !String.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("LSP_VERBOSE_LOGGING"))
+                    ? LogEventLevel.Verbose
+                    : LogEventLevel.Information;
+
+            LoggerConfiguration loggerConfiguration =
+                new LoggerConfiguration()
+                    .MinimumLevel.Verbose()
+                    .Enrich.WithProperty("Source", "Client")
+                    .WriteTo.Debug(
+                        restrictedToMinimumLevel: logLevel
+                    );
+
+            string seqUrl = Environment.GetEnvironmentVariable("LSP_SEQ_URL");
+            if (!String.IsNullOrWhiteSpace(seqUrl))
+            {
+                loggerConfiguration = loggerConfiguration.WriteTo.Seq(seqUrl,
+                    apiKey: Environment.GetEnvironmentVariable("LSP_SEQ_API_KEY"),
+                    restrictedToMinimumLevel: logLevel
+                );
+            }
+
+            string logFile = Environment.GetEnvironmentVariable("LSP_LOG_FILE");
+            if (!String.IsNullOrWhiteSpace(logFile))
+            {
+                string logExtension = Path.GetExtension(logFile);
+                logFile = Path.GetFullPath(
+                    Path.ChangeExtension(logFile, ".Client" + logExtension)
+                );
+
+                loggerConfiguration = loggerConfiguration.WriteTo.File(logFile,
+                    restrictedToMinimumLevel: logLevel
+                );
+            }
+
+            Log.Logger = loggerConfiguration.CreateLogger();
         }
     }
 }
