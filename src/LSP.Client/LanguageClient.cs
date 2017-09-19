@@ -11,6 +11,7 @@ namespace LSP.Client
     using ClientApis;
     using Dispatcher;
     using Handlers;
+    using Lsp.Capabilities.Client;
     using Protocol;
 
     /// <summary>
@@ -19,8 +20,14 @@ namespace LSP.Client
     public sealed class LanguageClient
         : IDisposable
     {
+        /// <summary>
+        ///     The dispatcher for incoming requests, notifications, and responses.
+        /// </summary>
         readonly ClientDispatcher _dispatcher = new ClientDispatcher();
         
+        /// <summary>
+        ///     <see cref="ProcessStartInfo"/> describing the server process.
+        /// </summary>
         readonly ProcessStartInfo _serverStartInfo;
 
         /// <summary>
@@ -33,6 +40,9 @@ namespace LSP.Client
         /// </summary>
         ClientConnection _connection;
 
+        /// <summary>
+        ///     Completion source for language server readiness.
+        /// </summary>
         TaskCompletionSource<object> _readyCompletion = new TaskCompletionSource<object>();
 
         /// <summary>
@@ -78,9 +88,27 @@ namespace LSP.Client
         public WorkspaceClient Workspace { get; }
 
         /// <summary>
+        ///     The client's capabilities.
+        /// </summary>
+        public ClientCapabilities ClientCapabilities { get; } = new ClientCapabilities
+        {
+            Workspace = new WorkspaceClientCapabilites
+            {
+            },
+            TextDocument = new TextDocumentClientCapabilities
+            {
+            }
+        };
+
+        /// <summary>
         ///     The server's capabilities.
         /// </summary>
         public ServerCapabilities ServerCapabilities { get; private set; }
+
+        /// <summary>
+        ///     Has the language client been initialised?
+        /// </summary>
+        public bool IsInitialized { get; private set; }
 
         /// <summary>
         ///     A <see cref="Task"/> that completes when the client is ready to handle requests.
@@ -90,7 +118,7 @@ namespace LSP.Client
         /// <summary>
         ///     A <see cref="Task"/> that completes when the underlying connection has closed and the server has stopped.
         /// </summary>
-        public Task HasStopped
+        public Task HasShutdown
         {
             get
             {
@@ -100,47 +128,47 @@ namespace LSP.Client
                 );
             }
         }
-        
+
         /// <summary>
-        ///     Start the language server.
+        ///     Initialise the language server.
         /// </summary>
+        /// <param name="workspaceRoot">
+        ///     The workspace root.
+        /// </param>
+        /// <param name="cancellationToken">
+        ///     An optional <see cref="CancellationToken"/> that can be used to cancel the operation.
+        /// </param>
         /// <returns>
-        ///     A <see cref="Task"/> representing the startup operation.
+        ///     A <see cref="Task"/> representing initialisation.
         /// </returns>
-        public async Task Start()
+        public async Task Initialize(string workspaceRoot, CancellationToken cancellationToken = default(CancellationToken))
         {
-            _serverStartInfo.CreateNoWindow = true;
-            _serverStartInfo.UseShellExecute = false;
-            _serverStartInfo.RedirectStandardInput = true;
-            _serverStartInfo.RedirectStandardOutput = true;
+            if (IsInitialized)
+                throw new InvalidOperationException("Client has already been initialised.");
 
-            _serverExitCompletion = new TaskCompletionSource<object>();
+            Start();
 
-            _serverProcess = Process.Start(_serverStartInfo);
-            _serverProcess.EnableRaisingEvents = true;
-            _serverProcess.Exited += ServerProcess_Exit;
+            InitializeParams initializeParams = new InitializeParams
+            {
+                RootPath = workspaceRoot,
+                Capabilities = ClientCapabilities
+            };
+            InitializeResult result = await SendRequest<InitializeResult>("initialize", initializeParams, cancellationToken);
+            ServerCapabilities = result.Capabilities;
 
-            if (_serverProcess.HasExited)
-                throw new InvalidOperationException($"Language server process terminated with exit code {_serverProcess.ExitCode}.");
+            IsInitialized = true;
 
-            _connection = new ClientConnection(_dispatcher, _serverProcess);
-            _connection.Open();
-
-            // TODO: Auto-initialise, and await InitializeResult response .
-            _readyCompletion.TrySetResult(null);
-
-            await IsReady;
+            _readyCompletion.SetResult(null);
         }
-
+        
         /// <summary>
         ///     Stop the language server.
         /// </summary>
         /// <returns>
         ///     A <see cref="Task"/> representing the shutdown operation.
         /// </returns>
-        public async Task Stop()
+        public async Task Shutdown()
         {
-            // TODO: Graceful shutdown.
             if (_connection != null)
             {
                 if (_connection.IsOpen)
@@ -164,25 +192,8 @@ namespace LSP.Client
                 _serverProcess = null;
             }
 
+            IsInitialized = false;
             _readyCompletion = new TaskCompletionSource<object>();
-        }
-
-        /// <summary>
-        ///     Initialise the language server.
-        /// </summary>
-        /// <param name="workspaceRoot">
-        ///     The workspace root.
-        /// </param>
-        /// <param name="cancellationToken">
-        ///     An optional <see cref="CancellationToken"/> that can be used to cancel the operation.
-        /// </param>
-        /// <returns>
-        ///     A <see cref="Task"/> representing initialisation.
-        /// </returns>
-        public async Task Initialize(string workspaceRoot, CancellationToken cancellationToken = default(CancellationToken))
-        {
-            InitializeResult result = await SendRequest<InitializeResult>("initialize", cancellationToken);
-            ServerCapabilities = result.Capabilities;
         }
 
         /// <summary>
@@ -262,6 +273,29 @@ namespace LSP.Client
         public Task<TResponse> SendRequest<TResponse>(string method, object request, CancellationToken cancellation = default(CancellationToken))
         {
             return _connection.SendRequest<TResponse>(method, request, cancellation);
+        }
+
+        /// <summary>
+        ///     Start the language server.
+        /// </summary>
+        void Start()
+        {
+            _serverStartInfo.CreateNoWindow = true;
+            _serverStartInfo.UseShellExecute = false;
+            _serverStartInfo.RedirectStandardInput = true;
+            _serverStartInfo.RedirectStandardOutput = true;
+
+            _serverExitCompletion = new TaskCompletionSource<object>();
+
+            _serverProcess = Process.Start(_serverStartInfo);
+            _serverProcess.EnableRaisingEvents = true;
+            _serverProcess.Exited += ServerProcess_Exit;
+
+            if (_serverProcess.HasExited)
+                throw new InvalidOperationException($"Language server process terminated with exit code {_serverProcess.ExitCode}.");
+
+            _connection = new ClientConnection(_dispatcher, _serverProcess);
+            _connection.Open();
         }
 
         /// <summary>

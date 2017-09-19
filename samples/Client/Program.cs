@@ -72,35 +72,19 @@ namespace Client
             Log.Information("Starting server...");
             using (LanguageClient client = new LanguageClient(serverStartInfo))
             {
+                client.ClientCapabilities.Workspace.DidChangeConfiguration = new DidChangeConfigurationCapability
+                {
+                    DynamicRegistration = false
+                };
+
                 client.HandleNotification("dummy/notify", () =>
                 {
                     Log.Information("Received dummy notification from language server.");
                 });
 
-                await client.Start();
+                await client.Initialize(workspaceRoot: @"C:\Foo");
 
                 Log.Information("Client started.");
-
-                Log.Information("Sending 'initialize' request...");
-                InitializeResult initializeResult = await client.SendRequest<InitializeResult>("initialize", new InitializeParams
-                {
-                    RootPath = @"C:\Foo",
-                    Capabilities = new ClientCapabilities
-                    {
-                        Workspace = new WorkspaceClientCapabilites
-                        {
-                            DidChangeConfiguration = new DidChangeConfigurationCapability
-                            {
-                                DynamicRegistration = false
-                            }
-                        },
-                        TextDocument = new TextDocumentClientCapabilities
-                        {
-
-                        }
-                    }
-                });
-                Log.Information("Received InitializeResult {@InitializeResult}...", initializeResult);
 
                 Log.Information("Sending 'dummy' request...");
                 await client.SendRequest("dummy", new DummyParams
@@ -126,7 +110,7 @@ namespace Client
                 Log.Information("Sent 'dummy' request.");
 
                 Log.Information("Stopping language server...");
-                await client.Stop();
+                await client.Shutdown();
                 Log.Information("Server stopped.");
             }
         }

@@ -508,7 +508,7 @@ namespace LSP.Client.Protocol
                         if (message.Params != null)
                         {
                             // Request from server.
-                            Log.Information("Received {RequestMethod} request {RequestId} from language server: {RequestParameters}",
+                            Log.Verbose("Received {RequestMethod} request {RequestId} from language server: {RequestParameters}",
                                 message.Method,
                                 message.Id,
                                 message.Params?.ToString(Formatting.None)
@@ -527,12 +527,12 @@ namespace LSP.Client.Protocol
                             {
                                 if (message.ErrorMessage != null)
                                 {
-                                    Log.Information("Received error response {RequestId} from language server: {@ErrorMessage}",
+                                    Log.Verbose("Received error response {RequestId} from language server: {@ErrorMessage}",
                                         message.Id,
                                         message.ErrorMessage
                                     );
 
-                                    Log.Information("Faulting request {RequestId}.", requestId);
+                                    Log.Verbose("Faulting request {RequestId}.", requestId);
 
                                     completion.TrySetException(new JsonRpcException(
                                         $"Error {message.ErrorMessage.Code}: {message.ErrorMessage.Message}"
@@ -540,12 +540,12 @@ namespace LSP.Client.Protocol
                                 }
                                 else
                                 {
-                                    Log.Information("Received response {RequestId} from language server: {ResponseResult}",
+                                    Log.Verbose("Received response {RequestId} from language server: {ResponseResult}",
                                         message.Id,
                                         message.Result?.ToString(Formatting.None)
                                     );
 
-                                    Log.Information("Completing request {RequestId}.", requestId);
+                                    Log.Verbose("Completing request {RequestId}.", requestId);
 
                                     completion.TrySetResult(message);
                                 }
