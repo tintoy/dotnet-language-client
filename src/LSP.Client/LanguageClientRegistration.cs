@@ -7,7 +7,7 @@ namespace LSP.Client
     /// <summary>
     ///     Extension methods for <see cref="LanguageClient"/> enabling various styles of handler registration.
     /// </summary>
-    public static class LanguageClientExtensions
+    public static class LanguageRegistration
     {
         /// <summary>
         ///     Register a handler for empty notifications.

@@ -2,6 +2,7 @@
 using Lsp.Capabilities.Client;
 using Lsp.Models;
 using LSP.Client;
+using Newtonsoft.Json.Linq;
 using Serilog;
 using Serilog.Events;
 using System;
@@ -88,7 +89,10 @@ namespace Client
                     {
                         Workspace = new WorkspaceClientCapabilites
                         {
-
+                            DidChangeConfiguration = new DidChangeConfigurationCapability
+                            {
+                                DynamicRegistration = false
+                            }
                         },
                         TextDocument = new TextDocumentClientCapabilities
                         {
@@ -103,6 +107,27 @@ namespace Client
                 {
                     Message = "Hello, world!"
                 });
+                Log.Information("Sent 'dummy' request.");
+
+                Log.Information("Sending 'workspace/didChangeConfiguration' notification...");
+                client.DidChangeConfiguration(
+                    new JObject(
+                        new JProperty("settings",
+                            new JObject(
+                                new JProperty("setting1", true),
+                                new JProperty("setting2", "Hello")
+                            )
+                        )
+                    )
+                );
+                Log.Information("Sent 'workspace/didChangeConfiguration' notification.");
+
+                Log.Information("Sending 'dummy' request...");
+                await client.SendRequest("dummy", new DummyParams
+                {
+                    Message = "Hello, world!"
+                });
+                Log.Information("Sent 'dummy' request.");
 
                 Log.Information("Stopping language server...");
                 await client.Stop();
@@ -123,6 +148,7 @@ namespace Client
             LoggerConfiguration loggerConfiguration =
                 new LoggerConfiguration()
                     .MinimumLevel.Verbose()
+                    .Enrich.WithProperty("ProcessId", Process.GetCurrentProcess().Id)
                     .Enrich.WithProperty("Source", "Client")
                     .WriteTo.Debug(
                         restrictedToMinimumLevel: logLevel

@@ -19,6 +19,7 @@ namespace LSP.Client.Protocol
         /// <summary>
         ///     The request / response Id, if the message represents a request or a response.
         /// </summary>
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate)]
         public object Id { get; set; }
 
         /// <summary>

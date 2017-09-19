@@ -3,6 +3,7 @@ using Lsp;
 using Serilog;
 using Serilog.Events;
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -58,6 +59,9 @@ namespace Server
 
             LanguageServer languageServer = new LanguageServer(input: Console.OpenStandardInput(2048), output: Console.OpenStandardOutput(2048));
             languageServer.AddHandler(
+                new ConfigurationHandler()
+            );
+            languageServer.AddHandler(
                 new DummyHandler(languageServer)
             );
 
@@ -91,6 +95,7 @@ namespace Server
             LoggerConfiguration loggerConfiguration =
                 new LoggerConfiguration()
                     .MinimumLevel.Verbose()
+                    .Enrich.WithProperty("ProcessId", Process.GetCurrentProcess().Id)
                     .Enrich.WithProperty("Source", "Server")
                     .WriteTo.Debug(
                         restrictedToMinimumLevel: logLevel

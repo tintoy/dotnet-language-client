@@ -502,35 +502,45 @@ namespace LSP.Client.Protocol
                     ServerMessage message = JsonConvert.DeserializeObject<ServerMessage>(responseBody);
                     Log.Verbose("Read response body {ResponseBody}.", responseBody);
 
-                    // Request / notification from server.
                     if (message.Id != null)
                     {
-                        int requestId = Convert.ToInt32(message.Id);
-                        TaskCompletionSource<ServerMessage> completion;
-                        if (_responseCompletions.TryGetValue(requestId, out completion))
+                        if (message.Params != null)
                         {
-                            Log.Information("Received {RequestMethod} response {RequestId} from language server: {ResponseParameters}",
-                                message.Method,
-                                message.Id,
-                                message.Params?.ToString(Formatting.None)
-                            );
-
-                            Log.Information("Completing request {RequestId}.", requestId);
-
-                            completion.TrySetResult(message);
-                        }
-                        else
-                        {
+                            // Request from server.
                             Log.Information("Received {RequestMethod} request {RequestId} from language server: {RequestParameters}",
                                 message.Method,
                                 message.Id,
                                 message.Params?.ToString(Formatting.None)
                             );
-                        }
 
-                        // Publish.
-                        if (!_incoming.IsAddingCompleted)
-                            _incoming.TryAdd(message);
+                            // Publish.
+                            if (!_incoming.IsAddingCompleted)
+                                _incoming.TryAdd(message);
+                        }
+                        else
+                        {
+                            // Response from server.
+                            int requestId = Convert.ToInt32(message.Id);
+                            TaskCompletionSource<ServerMessage> completion;
+                            if (_responseCompletions.TryGetValue(requestId, out completion))
+                            {
+                                Log.Information("Received response {RequestId} from language server: {ResponseResult}",
+                                    message.Id,
+                                    message.Result?.ToString(Formatting.None)
+                                );
+
+                                Log.Information("Completing request {RequestId}.", requestId);
+
+                                completion.TrySetResult(message);
+                            }
+                            else
+                            {
+                                Log.Information("Received unexpected response {RequestId} from language server: {ResponseResult}",
+                                    message.Id,
+                                    message.Result?.ToString(Formatting.None)
+                                );
+                            }
+                        }
                     }
                     else
                     {
@@ -568,13 +578,10 @@ namespace LSP.Client.Protocol
                 while (_incoming.TryTake(out ServerMessage message, -1, _cancellation))
                 {
                     if (message.Id != null)
-                        Log.Information("Dispatching incoming {RequestMethod} request {RequestId}...", message.Method, message.Id);
-                    else
-                        
-
-                    if (message.Id != null)
                     {
                         // Request.
+                        Log.Information("Dispatching incoming {RequestMethod} request {RequestId}...", message.Method, message.Id);
+
                         Task<object> handlerTask = _dispatcher.TryHandleRequest(message.Method, message.Params, _cancellation);
                         if (handlerTask == null)
                         {
@@ -611,6 +618,8 @@ namespace LSP.Client.Protocol
                             Method = message.Method,
                             Result = result != null ? JObject.FromObject(result) : null
                         });
+
+                        Log.Information("Dispatched incoming {RequestMethod} request {RequestId} (Result = {@Result}).", message.Method, message.Id, result);
                     }
                     else
                     {
