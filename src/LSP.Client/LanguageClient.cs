@@ -1,10 +1,13 @@
-﻿using System;
+﻿using Serilog;
+using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace LSP.Client
 {
+    using Dispatcher;
+    using Handlers;
     using Protocol;
 
     /// <summary>
@@ -13,6 +16,8 @@ namespace LSP.Client
     public sealed class LanguageClient
         : IDisposable
     {
+        readonly ClientDispatcher _dispatcher = new ClientDispatcher();
+        
         readonly ProcessStartInfo _serverStartInfo;
 
         /// <summary>
@@ -90,9 +95,13 @@ namespace LSP.Client
             _serverExitCompletion = new TaskCompletionSource<object>();
 
             _serverProcess = Process.Start(_serverStartInfo);
+            _serverProcess.EnableRaisingEvents = true;
             _serverProcess.Exited += ServerProcess_Exit;
 
-            _connection = new ClientConnection(_serverProcess);
+            if (_serverProcess.HasExited)
+                throw new InvalidOperationException($"Language server process terminated with exit code {_serverProcess.ExitCode}.");
+
+            _connection = new ClientConnection(_dispatcher, _serverProcess);
             _connection.Open();
 
             // TODO: Auto-initialise, and await InitializeResult response .
@@ -135,6 +144,17 @@ namespace LSP.Client
 
             _readyCompletion = new TaskCompletionSource<object>();
         }
+
+        /// <summary>
+        ///     Register a message handler.
+        /// </summary>
+        /// <param name="handler">
+        ///     The message handler.
+        /// </param>
+        /// <returns>
+        ///     An <see cref="IDisposable"/> representing the registration.
+        /// </returns>
+        public IDisposable RegisterHandler(IHandler handler) => _dispatcher.RegisterHandler(handler);
 
         /// <summary>
         ///     Send a notification to the language server.
@@ -215,6 +235,8 @@ namespace LSP.Client
         /// </param>
         void ServerProcess_Exit(object sender, EventArgs args)
         {
+            Log.Verbose("Server process has exited.");
+
             _serverExitCompletion?.TrySetResult(null);
         }
     }

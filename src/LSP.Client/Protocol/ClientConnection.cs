@@ -63,7 +63,7 @@ namespace LSP.Client.Protocol
         /// <summary>
         ///     The dispatcher for notifications and requests from the language server.
         /// </summary>
-        readonly ClientDispatcher _dispatcher = new ClientDispatcher();
+        readonly ClientDispatcher _dispatcher;
 
         /// <summary>
         ///     The next available request Id.
@@ -103,17 +103,23 @@ namespace LSP.Client.Protocol
         /// <summary>
         ///     Create a new <see cref="ClientConnection"/>.
         /// </summary>
+        /// <param name="dispatcher">
+        ///     The <see cref="ClientDispatcher"/> used to dispatch messages to handlers.
+        /// </param>
         /// <param name="serverProcess">
         ///     A <see cref="Process"/> representing the language server.
         /// </param>
-        public ClientConnection(Process serverProcess)
-            : this(input: serverProcess.StandardOutput.BaseStream, output: serverProcess.StandardInput.BaseStream, encoding: serverProcess.StandardInput.Encoding)
+        public ClientConnection(ClientDispatcher dispatcher, Process serverProcess)
+            : this(dispatcher, input: serverProcess.StandardOutput.BaseStream, output: serverProcess.StandardInput.BaseStream, encoding: serverProcess.StandardInput.Encoding)
         {
         }
 
         /// <summary>
         ///     Create a new <see cref="ClientConnection"/>.
         /// </summary>
+        /// <param name="dispatcher">
+        ///     The <see cref="ClientDispatcher"/> used to dispatch messages to handlers.
+        /// </param>
         /// <param name="input">
         ///     The input stream.
         /// </param>
@@ -123,8 +129,11 @@ namespace LSP.Client.Protocol
         /// <param name="encoding">
         ///     The text encoding to use.
         /// </param>
-        public ClientConnection(Stream input, Stream output, Encoding encoding)
+        public ClientConnection(ClientDispatcher dispatcher, Stream input, Stream output, Encoding encoding)
         {
+            if (dispatcher == null)
+                throw new ArgumentNullException(nameof(dispatcher));
+
             if (input == null)
                 throw new ArgumentNullException(nameof(input));
 
@@ -140,6 +149,7 @@ namespace LSP.Client.Protocol
             if (encoding == null)
                 throw new ArgumentNullException(nameof(encoding));
 
+            _dispatcher = dispatcher;
             _input = input;
             _output = output;
             _encoding = encoding;
@@ -519,7 +529,8 @@ namespace LSP.Client.Protocol
                         }
 
                         // Publish.
-                        _incoming.TryAdd(message);
+                        if (!_incoming.IsAddingCompleted)
+                            _incoming.TryAdd(message);
                     }
                     else
                     {
@@ -529,7 +540,8 @@ namespace LSP.Client.Protocol
                         );
 
                         // Publish.
-                        _incoming.TryAdd(message);
+                        if (!_incoming.IsAddingCompleted)
+                            _incoming.TryAdd(message);
                     }
                 }
             }

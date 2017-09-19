@@ -1,0 +1,6 @@
+<Project>
+    <PropertyGroup>
+        <NoWarn>IDE0016</NoWarn>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+</Project>
