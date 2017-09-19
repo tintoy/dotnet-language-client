@@ -70,13 +70,28 @@ namespace Client
             };
 
             Log.Information("Starting server...");
-            using (LanguageClient client = new LanguageClient(serverStartInfo))
+            LanguageClient client = new LanguageClient(serverStartInfo)
             {
-                client.ClientCapabilities.Workspace.DidChangeConfiguration = new DidChangeConfigurationCapability
+                ClientCapabilities =
                 {
-                    DynamicRegistration = false
-                };
+                    Workspace =
+                    {
+                        DidChangeConfiguration = new DidChangeConfigurationCapability
+                        {
+                            DynamicRegistration = false
+                        }
+                    }
+                }
+            };
+            using (client)
+            {
+                // Listen for log messages from the language server.
+                client.Window.OnLogMessage((message, messageType) =>
+                {
+                    Log.Information("Language server says: [{MessageType}] {Message}", messageType, message);
+                });
 
+                // Listen for our custom notification from the language server.
                 client.HandleNotification("dummy/notify", () =>
                 {
                     Log.Information("Received dummy notification from language server.");
@@ -86,28 +101,19 @@ namespace Client
 
                 Log.Information("Client started.");
 
-                Log.Information("Sending 'dummy' request...");
-                await client.SendRequest("dummy", new DummyParams
-                {
-                    Message = "Hello, world!"
-                });
-                Log.Information("Sent 'dummy' request.");
-
-                Log.Information("Sending 'workspace/didChangeConfiguration' notification...");
+                // Update server configuration.
                 client.Workspace.DidChangeConfiguration(
                     new JObject(
                         new JProperty("setting1", true),
                         new JProperty("setting2", "Hello")
                     )
                 );
-                Log.Information("Sent 'workspace/didChangeConfiguration' notification.");
 
-                Log.Information("Sending 'dummy' request...");
+                // Invoke our custom handler.
                 await client.SendRequest("dummy", new DummyParams
                 {
                     Message = "Hello, world!"
                 });
-                Log.Information("Sent 'dummy' request.");
 
                 Log.Information("Stopping language server...");
                 await client.Shutdown();

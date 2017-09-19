@@ -55,4 +55,15 @@ namespace LSP.Client
     ///     A <see cref="Task{TResult}"/> representing the operation that resolves to the response message.
     /// </returns>
     public delegate Task<TResponse> RequestHandler<TRequest, TResponse>(TRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    ///     A handler for log messages sent from the language server to the client.
+    /// </summary>
+    /// <param name="message">
+    ///     The log message.
+    /// </param>
+    /// <param name="messageType">
+    ///     The log message type.
+    /// </param>
+    public delegate void LogMessageHandler(string message, Lsp.Models.MessageType messageType);
 }

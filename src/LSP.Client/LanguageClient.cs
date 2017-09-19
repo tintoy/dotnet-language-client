@@ -83,7 +83,12 @@ namespace LSP.Client
         }
 
         /// <summary>
-        ///     The workspace API client.
+        ///     The LSP window API.
+        /// </summary>
+        public WindowClient Window { get; }
+
+        /// <summary>
+        ///     The LSP workspace API.
         /// </summary>
         public WorkspaceClient Workspace { get; }
 
@@ -151,13 +156,14 @@ namespace LSP.Client
             InitializeParams initializeParams = new InitializeParams
             {
                 RootPath = workspaceRoot,
-                Capabilities = ClientCapabilities
+                Capabilities = ClientCapabilities,
+                ProcessId = Process.GetCurrentProcess().Id
             };
+
             InitializeResult result = await SendRequest<InitializeResult>("initialize", initializeParams, cancellationToken);
             ServerCapabilities = result.Capabilities;
 
             IsInitialized = true;
-
             _readyCompletion.SetResult(null);
         }
         
