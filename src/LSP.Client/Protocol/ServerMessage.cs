@@ -37,5 +37,11 @@ namespace LSP.Client.Protocol
         /// </summary>
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate)]
         public JObject Result { get; set; }
+
+        /// <summary>
+        ///     The response error message (if any).
+        /// </summary>
+        [JsonProperty("message", DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate)]
+        public ErrorMessage ErrorMessage { get; set; }
     }
 }

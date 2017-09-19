@@ -44,7 +44,7 @@ namespace Client
             catch (AggregateException unexpectedError)
             {
                 foreach (Exception exception in unexpectedError.Flatten().InnerExceptions)
-                    Log.Error(unexpectedError, "Unexpected error.");
+                    Log.Error(exception, "Unexpected error.");
             }
             catch (Exception unexpectedError)
             {
@@ -110,14 +110,10 @@ namespace Client
                 Log.Information("Sent 'dummy' request.");
 
                 Log.Information("Sending 'workspace/didChangeConfiguration' notification...");
-                client.DidChangeConfiguration(
+                client.Workspace.DidChangeConfiguration(
                     new JObject(
-                        new JProperty("settings",
-                            new JObject(
-                                new JProperty("setting1", true),
-                                new JProperty("setting2", "Hello")
-                            )
-                        )
+                        new JProperty("setting1", true),
+                        new JProperty("setting2", "Hello")
                     )
                 );
                 Log.Information("Sent 'workspace/didChangeConfiguration' notification.");
@@ -141,7 +137,7 @@ namespace Client
         static void ConfigureLogging()
         {
             LogEventLevel logLevel =
-                !String.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("LSP_VERBOSE_LOGGING"))
+                Environment.GetEnvironmentVariable("LSP_VERBOSE_LOGGING") == "1"
                     ? LogEventLevel.Verbose
                     : LogEventLevel.Information;
 

@@ -1,4 +1,6 @@
-﻿using Serilog;
+﻿using Lsp.Capabilities.Server;
+using Lsp.Models;
+using Serilog;
 using System;
 using System.Diagnostics;
 using System.Threading;
@@ -6,6 +8,7 @@ using System.Threading.Tasks;
 
 namespace LSP.Client
 {
+    using ClientApis;
     using Dispatcher;
     using Handlers;
     using Protocol;
@@ -49,6 +52,7 @@ namespace LSP.Client
                 throw new ArgumentNullException(nameof(serverStartInfo));
 
             _serverStartInfo = serverStartInfo;
+            Workspace = new WorkspaceClient(this);
         }
 
         /// <summary>
@@ -57,8 +61,26 @@ namespace LSP.Client
         public void Dispose()
         {
             _connection?.Dispose();
-            _serverProcess?.Dispose();
+
+            if (_serverProcess != null)
+            {
+                if (!_serverProcess.HasExited)
+                    _serverProcess.Kill();
+
+                _serverProcess.Dispose();
+                _serverProcess = null;
+            }
         }
+
+        /// <summary>
+        ///     The workspace API client.
+        /// </summary>
+        public WorkspaceClient Workspace { get; }
+
+        /// <summary>
+        ///     The server's capabilities.
+        /// </summary>
+        public ServerCapabilities ServerCapabilities { get; private set; }
 
         /// <summary>
         ///     A <see cref="Task"/> that completes when the client is ready to handle requests.
@@ -143,6 +165,24 @@ namespace LSP.Client
             }
 
             _readyCompletion = new TaskCompletionSource<object>();
+        }
+
+        /// <summary>
+        ///     Initialise the language server.
+        /// </summary>
+        /// <param name="workspaceRoot">
+        ///     The workspace root.
+        /// </param>
+        /// <param name="cancellationToken">
+        ///     An optional <see cref="CancellationToken"/> that can be used to cancel the operation.
+        /// </param>
+        /// <returns>
+        ///     A <see cref="Task"/> representing initialisation.
+        /// </returns>
+        public async Task Initialize(string workspaceRoot, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            InitializeResult result = await SendRequest<InitializeResult>("initialize", cancellationToken);
+            ServerCapabilities = result.Capabilities;
         }
 
         /// <summary>

@@ -35,7 +35,7 @@ namespace Server
             catch (AggregateException unexpectedError)
             {
                 foreach (Exception exception in unexpectedError.Flatten().InnerExceptions)
-                    Log.Error(unexpectedError, "Unexpected error.");
+                    Log.Error(exception, "Unexpected error.");
             }
             catch (Exception unexpectedError)
             {
@@ -88,7 +88,7 @@ namespace Server
         static void ConfigureLogging()
         {
             LogEventLevel logLevel =
-                !String.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("LSP_VERBOSE_LOGGING"))
+                Environment.GetEnvironmentVariable("LSP_VERBOSE_LOGGING") == "1"
                     ? LogEventLevel.Verbose
                     : LogEventLevel.Information;
 

@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using JsonRpc.Server;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Serilog;
 using System;
@@ -524,14 +525,30 @@ namespace LSP.Client.Protocol
                             TaskCompletionSource<ServerMessage> completion;
                             if (_responseCompletions.TryGetValue(requestId, out completion))
                             {
-                                Log.Information("Received response {RequestId} from language server: {ResponseResult}",
-                                    message.Id,
-                                    message.Result?.ToString(Formatting.None)
-                                );
+                                if (message.ErrorMessage != null)
+                                {
+                                    Log.Information("Received error response {RequestId} from language server: {@ErrorMessage}",
+                                        message.Id,
+                                        message.ErrorMessage
+                                    );
 
-                                Log.Information("Completing request {RequestId}.", requestId);
+                                    Log.Information("Faulting request {RequestId}.", requestId);
 
-                                completion.TrySetResult(message);
+                                    completion.TrySetException(new JsonRpcException(
+                                        $"Error {message.ErrorMessage.Code}: {message.ErrorMessage.Message}"
+                                    ));
+                                }
+                                else
+                                {
+                                    Log.Information("Received response {RequestId} from language server: {ResponseResult}",
+                                        message.Id,
+                                        message.Result?.ToString(Formatting.None)
+                                    );
+
+                                    Log.Information("Completing request {RequestId}.", requestId);
+
+                                    completion.TrySetResult(message);
+                                }
                             }
                             else
                             {
