@@ -48,12 +48,8 @@ namespace VisualStudioExtension
                 Log.Logger = new LoggerConfiguration()
                     .MinimumLevel.Verbose()
                     .WriteTo.Debug(
-                        restrictedToMinimumLevel: LogEventLevel.Verbose
+                        restrictedToMinimumLevel: LogEventLevel.Information
                     )
-                    //.WriteTo.Seq("http://localhost:5341/",
-                    //    apiKey: "G1g47mx20qqzZYgZV7K",
-                    //    restrictedToMinimumLevel: LogEventLevel.Verbose
-                    //)
                     .CreateLogger();
             }
             finally

@@ -9,9 +9,10 @@ namespace VisualStudioExtension
     /// <summary>
     ///     QuickInfo provider for LSP-based Hover information.
     /// </summary>
-    [Export(typeof(IQuickInfoSourceProvider))]
-    [Name("LSP Quick Info Controller")]
     [ContentType("XML")]
+    [Name("LSP Quick Info Controller")]
+    [Order(After = "Default Quick Info Presenter")]
+    [Export(typeof(IQuickInfoSourceProvider))]
     internal class LspQuickInfoProvider
         : IQuickInfoSourceProvider
     {
