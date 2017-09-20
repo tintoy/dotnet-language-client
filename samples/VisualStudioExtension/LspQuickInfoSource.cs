@@ -9,10 +9,19 @@ using Microsoft.VisualStudio.Threading;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Media;
+
+using Span = Microsoft.VisualStudio.Text.Span;
 
 namespace VisualStudioExtension
 {
+    using Markdown = Markdown.Xaml.Markdown;
+
     /// <summary>
     ///     A QuickInfo source that uses Hover content from an LSP language server.
     /// </summary>
@@ -25,6 +34,25 @@ namespace VisualStudioExtension
         public LspQuickInfoSource()
         {
         }
+
+        /// <summary>
+        ///     The markdown renderer.
+        /// </summary>
+        Markdown MarkdownRenderer = new Markdown
+        {
+            CodeStyle = new Style
+            {
+                TargetType = typeof(Run),
+                Setters =
+                {
+                    new Setter
+                    {
+                        Property = TextElement.BackgroundProperty,
+                        Value = GetVSBrush(VsBrushes.AccentPaleKey)
+                    }
+                }
+            }
+        };
 
         /// <summary>
         ///     Dispose of resources being used by the <see cref="LspQuickInfoSource"/>.
@@ -49,13 +77,6 @@ namespace VisualStudioExtension
         {
             if (session == null)
                 throw new ArgumentNullException(nameof(session));
-
-            Trace.WriteLine(String.Format(
-                "SeqLoggerConfigurationExtensions Location = '{0}'", typeof(Serilog.SeqLoggerConfigurationExtensions).Assembly.Location
-            ));
-            Trace.WriteLine(String.Format(
-                "{0} Location = '{1}'", GetType().Name, GetType().Assembly.Location
-            ));
 
             applicableToSpan = null;
 
@@ -105,8 +126,21 @@ namespace VisualStudioExtension
 
             quickInfoContent.Clear();
 
-            foreach (MarkedString hoverSection in hover.Contents)
-                quickInfoContent.Add(hoverSection.Value);
+            string hoverContent = String.Join("\n---\n", hover.Contents.Select(
+                section => section.Value
+            ));
+
+            quickInfoContent.Add(new RichTextBox
+            {
+                Document = MarkdownRenderer.Transform(hoverContent),
+                IsReadOnly = true,
+                IsReadOnlyCaretVisible = false,
+                MinWidth = 200,
+                MinHeight = 50,
+                Foreground = GetVSBrush(VsBrushes.InfoTextKey),
+                Background = GetVSBrush(VsBrushes.HelpSearchBackgroundKey),
+                BorderBrush = GetVSBrush(VsBrushes.HelpSearchBackgroundKey)
+            });
 
             Span span = session.TextView.TextSnapshot.GetSpan(hover.Range);
 
@@ -114,6 +148,8 @@ namespace VisualStudioExtension
 
             Trace.WriteLine("LspQuickInfoSource.AugmentQuickInfoSession complete.");
         }
+
+        static Brush GetVSBrush(object brushKey) => (Brush)Application.Current.Resources[brushKey];
     }
 
     static class Extensions

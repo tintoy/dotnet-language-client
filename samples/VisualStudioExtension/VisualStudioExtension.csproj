@@ -49,6 +49,7 @@
     <Compile Include="ExtensionPackage.cs" />
     <Compile Include="LspQuickInfoProvider.cs" />
     <Compile Include="LspQuickInfoSource.cs" />
+    <Compile Include="Markdown.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ThreadAffinitiveSynchronizationContext.cs" />
   </ItemGroup>
