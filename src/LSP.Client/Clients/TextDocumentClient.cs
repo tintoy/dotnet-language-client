@@ -184,7 +184,8 @@ namespace LSP.Client.Clients
                     Character = character
                 }
             };
-            return await Client.SendRequest<Hover>("textDocument/hover", request, cancellationToken);
+
+            return await Client.SendRequest<Hover>("textDocument/hover", request, cancellationToken).ConfigureAwait(false);
         }
     }
 }

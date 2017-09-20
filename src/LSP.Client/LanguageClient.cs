@@ -179,8 +179,12 @@ namespace LSP.Client
                 ProcessId = Process.GetCurrentProcess().Id
             };
 
-            InitializeResult result = await SendRequest<InitializeResult>("initialize", initializeParams, cancellationToken);
+            Trace.WriteLine("Sending 'initialize' message to language server...");
+
+            InitializeResult result = await SendRequest<InitializeResult>("initialize", initializeParams, cancellationToken).ConfigureAwait(false);
             ServerCapabilities = result.Capabilities;
+
+            Trace.WriteLine("Sent 'initialize' message to language server.");
 
             IsInitialized = true;
             _readyCompletion.SetResult(null);
@@ -305,6 +309,8 @@ namespace LSP.Client
         /// </summary>
         void Start()
         {
+            Log.Verbose("Starting language server...");
+
             _serverStartInfo.CreateNoWindow = true;
             _serverStartInfo.UseShellExecute = false;
             _serverStartInfo.RedirectStandardInput = true;
@@ -319,8 +325,14 @@ namespace LSP.Client
             if (_serverProcess.HasExited)
                 throw new InvalidOperationException($"Language server process terminated with exit code {_serverProcess.ExitCode}.");
 
+            Log.Verbose("Language server is running.");
+
+            Log.Verbose("Opening connection to language server...");
+
             _connection = new ClientConnection(_dispatcher, _serverProcess);
             _connection.Open();
+
+            Log.Verbose("Connection to language server is open.");
         }
 
         /// <summary>

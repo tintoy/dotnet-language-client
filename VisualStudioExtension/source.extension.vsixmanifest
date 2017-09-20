@@ -18,6 +18,22 @@ A demo</Description>
     </Prerequisites>
     <Assets>
         <Asset Type="Microsoft.VisualStudio.VsPackage" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%;PkgdefProjectOutputGroup|" />
-      <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%|" />
-  </Assets>
+        <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%|" />
+        <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="Project" d:ProjectName="LSP.Client" Path="|LSP.Client|" AssemblyName="|LSP.Client;AssemblyName|" />
+        <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="File" Path="System.Runtime.dll" AssemblyName="System.Runtime, Version=4.1.2.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+        <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="File" Path="System.Net.Http.dll" AssemblyName="System.Net.Http, Version=4.2.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+        <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="File" Path="netstandard.dll" AssemblyName="netstandard, Version=2.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51" />
+        <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="File" Path="System.Diagnostics.Process.dll" AssemblyName="System.Diagnostics.Process, Version=4.1.2.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" />
+        <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="File" Path="System.ValueTuple.dll" AssemblyName="System.ValueTuple, Version=4.0.2.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51" />
+        <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="File" Path="Lsp.dll" AssemblyName="Lsp, Version=1.0.5.0, Culture=neutral, PublicKeyToken=null" />
+        <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="File" Path="JsonRpc.dll" AssemblyName="JsonRpc, Version=1.0.5.0, Culture=neutral, PublicKeyToken=null" />
+        <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="File" Path="Newtonsoft.Json.dll" AssemblyName="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed" />
+        <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="File" Path="Serilog.dll" AssemblyName="Serilog, Version=2.0.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10" />
+        <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="File" Path="Serilog.Formatting.Compact.dll" AssemblyName="Serilog.Formatting.Compact, Version=1.0.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10" />
+        <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="File" Path="Serilog.Sinks.Debug.dll" AssemblyName="Serilog.Sinks.Debug, Version=1.0.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10" />
+        <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="File" Path="Serilog.Sinks.File.dll" AssemblyName="Serilog.Sinks.File, Version=2.0.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10" />
+        <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="File" Path="Serilog.Sinks.PeriodicBatching.dll" AssemblyName="Serilog.Sinks.PeriodicBatching, Version=2.0.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10" />
+        <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="File" Path="Serilog.Sinks.RollingFile.dll" AssemblyName="Serilog.Sinks.RollingFile, Version=2.0.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10" />
+        <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="File" Path="Serilog.Sinks.Seq.dll" AssemblyName="Serilog.Sinks.Seq, Version=3.4.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10" />
+    </Assets>
 </PackageManifest>
