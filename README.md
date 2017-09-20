@@ -54,3 +54,12 @@ using (LanguageClient client = new LanguageClient(serverStartInfo))
     Log.Information("Server stopped.");
 }
 ```
+
+## Visual Studio Extension Sample
+
+> What's with all the assemblies in the project folder?
+
+VS won't find our assembly dependencies (a bigger issue for .NET Standard assemblies) unless we include them in the VSIX and provide a custom code-base (see `AssemblyDependencies.cs`).
+There's a custom target in the project to include some of the, but I haven't had time to include the others (e.g. `Serilog` and friends).
+
+I haven't had time to reorganise the assembly dependency stuff yet, but there's probably a much cleaner way to do it.
