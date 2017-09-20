@@ -70,6 +70,8 @@ namespace VisualStudioExtension
             (int line, int column) = triggerPoint.Value.GetLineAndColumn();
 
             Hover hover = null;
+
+            // A little bit of thread-fiddling required to do async in Visual Studio:
             ThreadHelper.JoinableTaskFactory.Run(async () =>
             {
                 await TaskScheduler.Default;

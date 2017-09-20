@@ -148,7 +148,7 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\src\LSP.Client\LSP.Client.csproj">
+    <ProjectReference Include="..\..\src\LSP.Client\LSP.Client.csproj">
       <Project>{565262c2-c4ba-4f84-aefd-640957242db7}</Project>
       <Name>LSP.Client</Name>
       <IncludeOutputGroupsInVSIX>BuiltProjectOutputGroup%3bBuiltProjectOutputGroupDependencies%3bGetCopyToOutputDirectoryItems%3bSatelliteDllsProjectOutputGroup%3b</IncludeOutputGroupsInVSIX>
