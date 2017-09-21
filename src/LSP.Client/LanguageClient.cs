@@ -121,6 +121,14 @@ namespace LSP.Client
                 Hover = new HoverCapability
                 {
                     DynamicRegistration = false
+                },
+                Completion = new CompletionCapability
+                {
+                    CompletionItem = new CompletionItemCapability
+                    {
+                        SnippetSupport = false
+                    },
+                    DynamicRegistration = false
                 }
             }
         };

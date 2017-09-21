@@ -14,7 +14,7 @@ namespace LSP.Client.Clients
     public partial class TextDocumentClient
     {
         /// <summary>
-        ///     Request hover information at the specified document position.
+        ///     Request completions at the specified document position.
         /// </summary>
         /// <param name="filePath">
         ///     The full file-system path of the text document.
@@ -29,15 +29,18 @@ namespace LSP.Client.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     A <see cref="Task{TResult}"/> that resolves to the hover information or <c>null</c> if no hover information is available at the specified position.
+        ///     A <see cref="Task{TResult}"/> that resolves to the completions or <c>null</c> if no completions are available at the specified position.
         /// </returns>
-        public Task<Hover> Hover(string filePath, int line, int column, CancellationToken cancellationToken = default(CancellationToken))
+        public Task<CompletionList> Completions(string filePath, int line, int column, CancellationToken cancellationToken = default(CancellationToken))
         {
-            return PositionalRequest<Hover>("textDocument/hover", filePath, line, column, cancellationToken);
+            if (string.IsNullOrWhiteSpace(filePath))
+                throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(filePath)}.", nameof(filePath));
+
+            return PositionalRequest<CompletionList>("textDocument/completion", filePath, line, column, cancellationToken);
         }
 
         /// <summary>
-        ///     Request hover information at the specified document position.
+        ///     Request completions at the specified document position.
         /// </summary>
         /// <param name="documentUri">
         ///     The document URI.
@@ -52,11 +55,11 @@ namespace LSP.Client.Clients
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the request.
         /// </param>
         /// <returns>
-        ///     A <see cref="Task{TResult}"/> that resolves to the hover information or <c>null</c> if no hover information is available at the specified position.
+        ///     A <see cref="Task{TResult}"/> that resolves to the completions or <c>null</c> if no completions are available at the specified position.
         /// </returns>
-        public Task<Hover> Hover(Uri documentUri, int line, int column, CancellationToken cancellationToken = default(CancellationToken))
+        public Task<CompletionList> Completions(Uri documentUri, int line, int column, CancellationToken cancellationToken = default(CancellationToken))
         {
-            return PositionalRequest<Hover>("textDocument/hover", documentUri, line, column, cancellationToken);
+            return PositionalRequest<CompletionList>("textDocument/completion", documentUri, line, column, cancellationToken);
         }
     }
 }

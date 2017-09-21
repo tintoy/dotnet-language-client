@@ -1,4 +1,7 @@
-﻿using System.Threading;
+﻿using Lsp.Models;
+using System;
+using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace LSP.Client
@@ -66,4 +69,18 @@ namespace LSP.Client
     ///     The log message type.
     /// </param>
     public delegate void LogMessageHandler(string message, Lsp.Models.MessageType messageType);
+
+    /// <summary>
+    ///     A handler for diagnostics published by the language server.
+    /// </summary>
+    /// <param name="documentUri">
+    ///     The URI of the document that the diagnostics apply to.
+    /// </param>
+    /// <param name="diagnostics">
+    ///     A list of <see cref="Diagnostic"/>s.
+    /// </param>
+    /// <remarks>
+    ///     The diagnostics should replace any previously published diagnostics for the specified document.
+    /// </remarks>
+    public delegate void PublishDiagnosticsHandler(Uri documentUri, List<Diagnostic> diagnostics);
 }

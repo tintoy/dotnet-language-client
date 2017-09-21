@@ -754,10 +754,10 @@ namespace LSP.Client.Protocol
         }
 
         /// <summary>
-        ///     Dispatch a notification message.
+        ///     Dispatch a notification.
         /// </summary>
         /// <param name="notificationMessage">
-        ///     
+        ///     The notification message.
         /// </param>
         void DispatchNotification(ServerMessage notificationMessage)
         {
@@ -782,14 +782,10 @@ namespace LSP.Client.Protocol
                 return;
             }
 
-            if (!handled)
-            {
-                Log.Warning("Unable to dispatch incoming {NotificationMethod} notification (no handler registered).", notificationMessage.Method);
-
-                return;
-            }
+            if (handled)
+                Log.Verbose("Dispatched incoming {NotificationMethod} notification.", notificationMessage.Method);
             else
-                Log.Information("Dispatched incoming {NotificationMethod} notification.", notificationMessage.Method);
+                Log.Verbose("Ignored incoming {NotificationMethod} notification (no handler registered).", notificationMessage.Method);
         }
     }
 }
