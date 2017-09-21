@@ -212,6 +212,7 @@ namespace LSP.Client
                 if (_connection.IsOpen)
                 {
                     _connection.SendNotification("shutdown");
+                    _connection.SendNotification("exit");
                     _connection.Close(flushOutgoing: true);
                 }
 

@@ -15,7 +15,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
-
+using System.Windows.Shapes;
 using Span = Microsoft.VisualStudio.Text.Span;
 
 namespace VisualStudioExtension
@@ -49,6 +49,18 @@ namespace VisualStudioExtension
                     {
                         Property = TextElement.BackgroundProperty,
                         Value = GetVSBrush(VsBrushes.AccentPaleKey)
+                    }
+                }
+            },
+            SeparatorStyle = new Style
+            {
+                TargetType = typeof(Line),
+                Setters =
+                {
+                    new Setter
+                    {
+                        Property = Shape.StrokeProperty,
+                        Value = GetVSBrush(VsBrushes.DebuggerDataTipActiveBorderKey)
                     }
                 }
             }
@@ -135,11 +147,11 @@ namespace VisualStudioExtension
                 Document = MarkdownRenderer.Transform(hoverContent),
                 IsReadOnly = true,
                 IsReadOnlyCaretVisible = false,
-                MinWidth = 200,
+                MinWidth = 300,
                 MinHeight = 50,
-                Foreground = GetVSBrush(VsBrushes.InfoTextKey),
-                Background = GetVSBrush(VsBrushes.HelpSearchBackgroundKey),
-                BorderBrush = GetVSBrush(VsBrushes.HelpSearchBackgroundKey)
+                Foreground = GetVSBrush(VsBrushes.HelpHowDoIPaneTextKey),
+                Background = Brushes.Transparent,
+                BorderBrush = Brushes.Transparent
             });
 
             Span span = session.TextView.TextSnapshot.GetSpan(hover.Range);

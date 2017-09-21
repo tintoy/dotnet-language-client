@@ -44,12 +44,12 @@ namespace LSP.Client.Protocol
         /// <summary>
         ///     <see cref="CancellationTokenSource"/>s representing cancellation of requests from the language server (keyed by request Id).
         /// </summary>
-        readonly ConcurrentDictionary<object, CancellationTokenSource> _requestCancellations = new ConcurrentDictionary<object, CancellationTokenSource>();
+        readonly ConcurrentDictionary<string, CancellationTokenSource> _requestCancellations = new ConcurrentDictionary<string, CancellationTokenSource>();
 
         /// <summary>
         ///     <see cref="TaskCompletionSource{TResult}"/>s representing completion of responses from the language server (keyed by request Id).
         /// </summary>
-        readonly ConcurrentDictionary<object, TaskCompletionSource<ServerMessage>> _responseCompletions = new ConcurrentDictionary<object, TaskCompletionSource<ServerMessage>>();
+        readonly ConcurrentDictionary<string, TaskCompletionSource<ServerMessage>> _responseCompletions = new ConcurrentDictionary<string, TaskCompletionSource<ServerMessage>>();
 
         /// <summary>
         ///     The input stream.
@@ -298,7 +298,7 @@ namespace LSP.Client.Protocol
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
 
-            int requestId = Interlocked.Increment(ref _nextRequestId);
+            string requestId = Interlocked.Increment(ref _nextRequestId).ToString();
 
             TaskCompletionSource<ServerMessage> completion = new TaskCompletionSource<ServerMessage>(state: requestId);
             cancellationToken.Register(() =>
@@ -353,7 +353,7 @@ namespace LSP.Client.Protocol
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
 
-            int requestId = Interlocked.Increment(ref _nextRequestId);
+            string requestId = Interlocked.Increment(ref _nextRequestId).ToString();
 
             TaskCompletionSource<ServerMessage> completion = new TaskCompletionSource<ServerMessage>(state: requestId);
             cancellationToken.Register(() =>
@@ -481,7 +481,7 @@ namespace LSP.Client.Protocol
                         else
                         {
                             // Response.
-                            object requestId = message.Id;
+                            string requestId = message.Id.ToString();
                             TaskCompletionSource<ServerMessage> completion;
                             if (_responseCompletions.TryGetValue(requestId, out completion))
                             {
@@ -665,15 +665,19 @@ namespace LSP.Client.Protocol
         /// </param>
         private void DispatchRequest(ServerMessage requestMessage)
         {
-            Log.Information("Dispatching incoming {RequestMethod} request {RequestId}...", requestMessage.Method, requestMessage.Id);
+            if (requestMessage == null)
+                throw new ArgumentNullException(nameof(requestMessage));
+
+            string requestId = requestMessage.Id.ToString();
+            Log.Information("Dispatching incoming {RequestMethod} request {RequestId}...", requestMessage.Method, requestId);
 
             CancellationTokenSource requestCancellation = CancellationTokenSource.CreateLinkedTokenSource(_cancellation);
-            _requestCancellations.TryAdd(requestMessage.Id, requestCancellation);
+            _requestCancellations.TryAdd(requestId, requestCancellation);
 
             Task<object> handlerTask = _dispatcher.TryHandleRequest(requestMessage.Method, requestMessage.Params, requestCancellation.Token);
             if (handlerTask == null)
             {
-                Log.Warning("Unable to dispatch incoming {RequestMethod} request {RequestId} (no handler registered).", requestMessage.Method, requestMessage.Id);
+                Log.Warning("Unable to dispatch incoming {RequestMethod} request {RequestId} (no handler registered).", requestMessage.Method, requestId);
 
                 _outgoing.TryAdd(
                     new JsonRpc.Server.Messages.MethodNotFound(requestMessage.Id)
@@ -684,15 +688,14 @@ namespace LSP.Client.Protocol
             handlerTask.ContinueWith(_ =>
             {
                 if (handlerTask.IsCanceled)
-                    Log.Verbose("{RequestMethod} request {RequestId} canceled.", requestMessage.Method, requestMessage.Id);
+                    Log.Verbose("{RequestMethod} request {RequestId} canceled.", requestMessage.Method, requestId);
                 else if (handlerTask.IsFaulted)
                 {
                     Exception handlerError = handlerTask.Exception.Flatten().InnerExceptions[0];
 
-                    Log.Error(handlerError, "{RequestMethod} request {RequestId} failed (unexpected error raised by handler).", requestMessage.Method, requestMessage.Id);
+                    Log.Error(handlerError, "{RequestMethod} request {RequestId} failed (unexpected error raised by handler).", requestMessage.Method, requestId);
 
-                    _outgoing.TryAdd(new JsonRpc.Error(
-                        requestMessage.Id,
+                    _outgoing.TryAdd(new JsonRpc.Error(requestId,
                         new JsonRpc.Server.Messages.ErrorMessage(
                             code: 500,
                             message: "Error processing request: " + handlerError.Message,
@@ -702,7 +705,7 @@ namespace LSP.Client.Protocol
                 }
                 else if (handlerTask.IsCompleted)
                 {
-                    Log.Information("{RequestMethod} request {RequestId} complete (Result = {@Result}).", requestMessage.Method, requestMessage.Id, handlerTask.Result);
+                    Log.Information("{RequestMethod} request {RequestId} complete (Result = {@Result}).", requestMessage.Method, requestId, handlerTask.Result);
 
                     _outgoing.TryAdd(new ClientMessage
                     {
@@ -712,7 +715,7 @@ namespace LSP.Client.Protocol
                     });
                 }
 
-                _requestCancellations.TryRemove(requestMessage.Id, out CancellationTokenSource cancellation);
+                _requestCancellations.TryRemove(requestId, out CancellationTokenSource cancellation);
                 cancellation.Dispose();
             });
 #pragma warning restore CS4014 // Continuation does the work we need; no need to await it as this would tie up the dispatch loop.
@@ -731,7 +734,7 @@ namespace LSP.Client.Protocol
             if (requestMessage == null)
                 throw new ArgumentNullException(nameof(requestMessage));
 
-            object cancelRequestId = requestMessage.Params?.Value<object>("id");
+            string cancelRequestId = requestMessage.Params?.Value<object>("id")?.ToString();
             if (cancelRequestId != null)
             {
                 if (_requestCancellations.TryRemove(cancelRequestId, out CancellationTokenSource requestCancellation))
