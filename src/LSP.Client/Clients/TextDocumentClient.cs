@@ -1,11 +1,11 @@
 ﻿using Lsp.Models;
 using System;
-
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+    
 namespace LSP.Client.Clients
 {
-    using System.IO;
-    using System.Threading;
-    using System.Threading.Tasks;
     using Utilities;
 
     /// <summary>
@@ -116,6 +116,42 @@ namespace LSP.Client.Clients
                     Text = text,
                     LanguageId = languageId,
                     Version = version,
+                    Uri = documentUri
+                }
+            });
+        }
+
+        /// <summary>
+        ///     Notify the language server that the client has closeed a text document.
+        /// </summary>
+        /// <param name="filePath">
+        ///     The full file-system path of the text document.
+        /// </param>
+        public void DidClose(string filePath)
+        {
+            if (string.IsNullOrWhiteSpace(filePath))
+                throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(filePath)}.", nameof(filePath));
+
+            DidClose(
+                DocumentUri.FromFileSystemPath(filePath)
+            );
+        }
+
+        /// <summary>
+        ///     Notify the language server that the client has closeed a text document.
+        /// </summary>
+        /// <param name="documentUri">
+        ///     The document URI.
+        /// </param>
+        public void DidClose(Uri documentUri)
+        {
+            if (documentUri == null)
+                throw new ArgumentNullException(nameof(documentUri));
+
+            Client.SendNotification("textDocument/didClose", new DidCloseTextDocumentParams
+            {
+                TextDocument = new TextDocumentItem
+                {
                     Uri = documentUri
                 }
             });

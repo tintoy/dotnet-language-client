@@ -35,5 +35,10 @@ A demo</Description>
         <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="File" Path="Serilog.Sinks.PeriodicBatching.dll" AssemblyName="Serilog.Sinks.PeriodicBatching, Version=2.0.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10" />
         <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="File" Path="Serilog.Sinks.RollingFile.dll" AssemblyName="Serilog.Sinks.RollingFile, Version=2.0.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10" />
         <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="File" Path="Serilog.Sinks.Seq.dll" AssemblyName="Serilog.Sinks.Seq, Version=3.4.0.0, Culture=neutral, PublicKeyToken=24c2f752a8e58a10" />
+        <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="File" Path="System.Reactive.Core.dll" AssemblyName="System.Reactive.Core, Version=3.0.3000.0, Culture=neutral, PublicKeyToken=94bc3704cddfc263" />
+        <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="File" Path="System.Reactive.Interfaces.dll" AssemblyName="System.Reactive.Interfaces, Version=3.0.1000.0, Culture=neutral, PublicKeyToken=94bc3704cddfc263" />
+        <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="File" Path="System.Reactive.Linq.dll" AssemblyName="System.Reactive.Linq, Version=3.0.3000.0, Culture=neutral, PublicKeyToken=94bc3704cddfc263" />
+        <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="File" Path="System.Reactive.PlatformServices.dll" AssemblyName="System.Reactive.PlatformServices, Version=3.0.3000.0, Culture=neutral, PublicKeyToken=94bc3704cddfc263" />
+        <Asset Type="Microsoft.VisualStudio.Assembly" d:Source="File" Path="System.Reactive.Windows.Threading.dll" AssemblyName="System.Reactive.Windows.Threading, Version=3.0.1000.0, Culture=neutral, PublicKeyToken=94bc3704cddfc263" />
     </Assets>
 </PackageManifest>

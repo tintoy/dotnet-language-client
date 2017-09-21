@@ -11,6 +11,7 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Task = System.Threading.Tasks.Task;
 using System.Threading;
+using Lsp.Models;
 
 namespace VisualStudioExtension
 {
@@ -28,6 +29,11 @@ namespace VisualStudioExtension
         ///     The package GUID, as a string.
         /// </summary>
         public const string PackageGuidString = "bfe31c89-943f-4106-ad20-5c60f656e9be";
+
+        /// <summary>
+        ///     The GUID of the package's output window pane.
+        /// </summary>
+        public static readonly Guid PackageOutputPaneGuid = new Guid("9d7abb60-bbe9-4e72-95ff-8cf6df23d5f9");
 
         static readonly TaskCompletionSource<object> InitCompletion = new TaskCompletionSource<object>();
 
@@ -57,6 +63,11 @@ namespace VisualStudioExtension
                 Trace.WriteLine("Exit ExtensionPackage constructor.");
             }
         }
+
+        /// <summary>
+        ///     The package's output window pane.
+        /// </summary>
+        public static IVsOutputWindowPane OutputPane { get; private set; }
 
         /// <summary>
         ///     The LSP client.
@@ -98,13 +109,21 @@ namespace VisualStudioExtension
         {
             Trace.WriteLine("Enter ExtensionPackage.InitializeAsync.");
 
+            cancellationToken.Register(
+                () => InitCompletion.TrySetCanceled(cancellationToken)
+            );
+
             await base.InitializeAsync(cancellationToken, progress);
+
+            OutputPane = GetOutputPane(PackageOutputPaneGuid, "LSP Demo");
+            OutputPane.Activate();
+            OutputPane.OutputStringThreadSafe("Initialising...\n");
 
             await TaskScheduler.Default;
 
             try
             {
-                Trace.WriteLine("Creating language service...");
+                Trace.WriteLine("Creating language service...\n");
 
                 LanguageClient = new LanguageClient(new ProcessStartInfo("dotnet")
                 {
@@ -121,37 +140,58 @@ namespace VisualStudioExtension
                         ["LSP_VERBOSE_LOGGING"] = "1"
                     }
                 });
-
-                Trace.WriteLine("Retrieving solution directory...");
+                LanguageClient.Window.OnLogMessage(LanguageClient_LogMessage);
 
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+                Trace.WriteLine("Retrieving solution directory...");
+                OutputPane.OutputStringThreadSafe("Examining solution...\n");
 
                 IVsSolution solution = (IVsSolution)GetService(typeof(SVsSolution));
 
                 int hr = solution.GetSolutionInfo(out string solutionDir, out _, out _);
-                Trace.WriteLine($"GetSolutionInfo: hr = {hr}");
                 ErrorHandler.ThrowOnFailure(hr);
+
+                Trace.WriteLine("Initialising language client...");
+                OutputPane.OutputString("Initialising language client...\n");
 
                 await TaskScheduler.Default;
 
-                Trace.WriteLine("Initialising language client...");
-
                 await LanguageClient.Initialize(solutionDir);
 
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
                 Trace.WriteLine("Language client initialised.");
+                OutputPane.OutputStringThreadSafe("Language client initialised.\n");
 
                 InitCompletion.TrySetResult(null);
+
+                OutputPane.OutputStringThreadSafe("Initialisation complete.\n");
             }
             catch (Exception languageClientError)
             {
                 Trace.WriteLine(languageClientError);
-
+                
                 InitCompletion.TrySetException(languageClientError);
+
+                ThreadHelper.JoinableTaskFactory.Run(async () =>
+                {
+                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+                    OutputPane.OutputStringThreadSafe($"Initialisation error: {languageClientError}\n");
+                });
             }
             finally
             {
                 Trace.WriteLine("Exit ExtensionPackage.InitializeAsync.");
             }
+        }
+
+        async void LanguageClient_LogMessage(string message, MessageType messageType)
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+            OutputPane.OutputStringThreadSafe(message + "\n");
         }
     }
 }
