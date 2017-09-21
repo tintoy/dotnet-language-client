@@ -1,4 +1,6 @@
 ﻿using Lsp;
+using Lsp.Models;
+using Lsp.Protocol;
 using Newtonsoft.Json;
 using Serilog;
 using System;
@@ -69,9 +71,18 @@ namespace Common
         {
             Log.Information("DummyHandler got request {@Request}", request);
 
+            Server.LogMessage(new LogMessageParams
+            {
+                Message = "Hello from DummyHandler :-)",
+                Type = MessageType.Info
+            });
+
+            char[] message = request.Message.ToCharArray();
+            Array.Reverse(message);
+
             Server.SendNotification("dummy/notify", new DummyParams
             {
-                Message = request.Message
+                Message = new String(message)
             });
 
             return Task.CompletedTask;

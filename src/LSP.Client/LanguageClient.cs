@@ -17,6 +17,9 @@ namespace LSP.Client
     /// <summary>
     ///     A client for the Language Server Protocol.
     /// </summary>
+    /// <remarks>
+    ///     Note - at this stage, a <see cref="LanguageClient"/> cannot be reused once <see cref="Shutdown"/> has been called; instead, create a new one.
+    /// </remarks>
     public sealed class LanguageClient
         : IDisposable
     {
@@ -85,6 +88,11 @@ namespace LSP.Client
         }
 
         /// <summary>
+        ///     The client's logger.
+        /// </summary>
+        ILogger Log { get; } = Serilog.Log.ForContext<LanguageClient>();
+
+        /// <summary>
         ///     The LSP Text Document API.
         /// </summary>
         public TextDocumentClient TextDocument { get; }
@@ -144,6 +152,11 @@ namespace LSP.Client
         public bool IsInitialized { get; private set; }
 
         /// <summary>
+        ///     Is the connection to the language server open?
+        /// </summary>
+        public bool IsConnected => _connection != null && _connection.IsOpen;
+
+        /// <summary>
         ///     A <see cref="Task"/> that completes when the client is ready to handle requests.
         /// </summary>
         public Task IsReady => _readyCompletion.Task;
@@ -174,6 +187,11 @@ namespace LSP.Client
         /// <returns>
         ///     A <see cref="Task"/> representing initialisation.
         /// </returns>
+        /// <exception cref="InvalidOperationException">
+        ///     <see cref="Initialize(string, CancellationToken)"/> has already been called.
+        ///     
+        ///     <see cref="Initialize(string, CancellationToken)"/> can only be called once per <see cref="LanguageClient"/>; if you have called <see cref="Shutdown"/>, you will need to use a new <see cref="LanguageClient"/>.
+        /// </exception>
         public async Task Initialize(string workspaceRoot, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (IsInitialized)
@@ -207,18 +225,17 @@ namespace LSP.Client
         /// </returns>
         public async Task Shutdown()
         {
-            if (_connection != null)
+            ClientConnection connection = Interlocked.Exchange(ref _connection, null);
+            if (connection != null)
             {
-                if (_connection.IsOpen)
+                if (connection.IsOpen)
                 {
-                    _connection.SendNotification("shutdown");
-                    _connection.SendNotification("exit");
-                    _connection.Close(flushOutgoing: true);
+                    connection.SendNotification("shutdown");
+                    connection.SendNotification("exit");
+                    connection.Close(flushOutgoing: true);
                 }
 
-                await _connection.HasClosed;
-
-                _connection = null;
+                await connection.HasClosed;
             }
 
             if (_serverProcess != null)
@@ -254,7 +271,11 @@ namespace LSP.Client
         /// </param>
         public void SendNotification(string method)
         {
-            _connection.SendNotification(method);
+            ClientConnection connection = _connection;
+            if (connection == null || !connection.IsOpen)
+                throw new InvalidOperationException("Not connected to the language server.");
+
+            connection.SendNotification(method);
         }
 
         /// <summary>
@@ -268,7 +289,11 @@ namespace LSP.Client
         /// </param>
         public void SendNotification(string method, object notification)
         {
-            _connection.SendNotification(method, notification);
+            ClientConnection connection = _connection;
+            if (connection == null || !connection.IsOpen)
+                throw new InvalidOperationException("Not connected to the language server.");
+
+            connection.SendNotification(method, notification);
         }
 
         /// <summary>
@@ -288,7 +313,11 @@ namespace LSP.Client
         /// </returns>
         public Task SendRequest(string method, object request, CancellationToken cancellationToken = default(CancellationToken))
         {
-            return _connection.SendRequest(method, request, cancellationToken);
+            ClientConnection connection = _connection;
+            if (connection == null || !connection.IsOpen)
+                throw new InvalidOperationException("Not connected to the language server.");
+
+            return connection.SendRequest(method, request, cancellationToken);
         }
 
         /// <summary>
@@ -311,7 +340,11 @@ namespace LSP.Client
         /// </returns>
         public Task<TResponse> SendRequest<TResponse>(string method, object request, CancellationToken cancellation = default(CancellationToken))
         {
-            return _connection.SendRequest<TResponse>(method, request, cancellation);
+            ClientConnection connection = _connection;
+            if (connection == null || !connection.IsOpen)
+                throw new InvalidOperationException("Not connected to the language server.");
+
+            return connection.SendRequest<TResponse>(method, request, cancellation);
         }
 
         /// <summary>
@@ -328,12 +361,15 @@ namespace LSP.Client
 
             _serverExitCompletion = new TaskCompletionSource<object>();
 
-            _serverProcess = Process.Start(_serverStartInfo);
-            _serverProcess.EnableRaisingEvents = true;
+            _serverProcess = new Process
+            {
+                StartInfo = _serverStartInfo,
+                EnableRaisingEvents = true
+            };
             _serverProcess.Exited += ServerProcess_Exit;
 
-            if (_serverProcess.HasExited)
-                throw new InvalidOperationException($"Language server process terminated with exit code {_serverProcess.ExitCode}.");
+            if (!_serverProcess.Start())
+                throw new InvalidOperationException("Failed to launch language server .");
 
             Log.Verbose("Language server is running.");
 
@@ -354,11 +390,25 @@ namespace LSP.Client
         /// <param name="args">
         ///     The event arguments.
         /// </param>
-        void ServerProcess_Exit(object sender, EventArgs args)
+        async void ServerProcess_Exit(object sender, EventArgs args)
         {
-            Log.Verbose("Server process has exited.");
+            Log.Verbose("Server process has exited; language client is shutting down...");
 
             _serverExitCompletion?.TrySetResult(null);
+
+            ClientConnection connection = Interlocked.Exchange(ref _connection, null);
+            if (connection != null)
+            {
+                using (connection)
+                {
+                    connection.Close();
+                    await connection.HasClosed;
+                }
+            }
+
+            await Shutdown();
+
+            Log.Verbose("Language client shutdown complete.");
         }
     }
 }

@@ -32,6 +32,16 @@ namespace LSP.Client.Protocol
         public static readonly TimeSpan FlushTimeout = TimeSpan.FromSeconds(5);
 
         /// <summary>
+        ///     The encoding used for message headers.
+        /// </summary>
+        public static Encoding HeaderEncoding = Encoding.ASCII;
+
+        /// <summary>
+        ///     The encoding used for message payloads.
+        /// </summary>
+        public static Encoding PayloadEncoding = Encoding.UTF8;
+
+        /// <summary>
         ///     The queue of outgoing requests.
         /// </summary>
         readonly BlockingCollection<object> _outgoing = new BlockingCollection<object>(new ConcurrentQueue<object>());
@@ -60,11 +70,6 @@ namespace LSP.Client.Protocol
         ///     The output stream.
         /// </summary>
         readonly Stream _output;
-
-        /// <summary>
-        ///     The text encoding to use.
-        /// </summary>
-        readonly Encoding _encoding;
 
         /// <summary>
         ///     The dispatcher for notifications and requests from the language server.
@@ -116,7 +121,7 @@ namespace LSP.Client.Protocol
         ///     A <see cref="Process"/> representing the language server.
         /// </param>
         public ClientConnection(ClientDispatcher dispatcher, Process serverProcess)
-            : this(dispatcher, input: serverProcess.StandardOutput.BaseStream, output: serverProcess.StandardInput.BaseStream, encoding: serverProcess.StandardInput.Encoding)
+            : this(dispatcher, input: serverProcess.StandardOutput.BaseStream, output: serverProcess.StandardInput.BaseStream)
         {
         }
 
@@ -132,10 +137,7 @@ namespace LSP.Client.Protocol
         /// <param name="output">
         ///     The output stream.
         /// </param>
-        /// <param name="encoding">
-        ///     The text encoding to use.
-        /// </param>
-        public ClientConnection(ClientDispatcher dispatcher, Stream input, Stream output, Encoding encoding)
+        public ClientConnection(ClientDispatcher dispatcher, Stream input, Stream output)
         {
             if (dispatcher == null)
                 throw new ArgumentNullException(nameof(dispatcher));
@@ -152,13 +154,9 @@ namespace LSP.Client.Protocol
             if (!output.CanWrite)
                 throw new ArgumentException("Output stream does not support reading.", nameof(output));
 
-            if (encoding == null)
-                throw new ArgumentNullException(nameof(encoding));
-
             _dispatcher = dispatcher;
             _input = input;
             _output = output;
-            _encoding = encoding;
         }
 
         /// <summary>
@@ -167,7 +165,14 @@ namespace LSP.Client.Protocol
         public void Dispose()
         {
             Close();
+            
+            _cancellationSource?.Dispose();
         }
+
+        /// <summary>
+        ///     The connection's logger.
+        /// </summary>
+        ILogger Log { get; } = Serilog.Log.ForContext<ClientConnection>();
 
         /// <summary>
         ///     Is the connection open?
@@ -213,9 +218,10 @@ namespace LSP.Client.Protocol
         {
             if (flushOutgoing)
             {
-                // TODO: Drain the outgoing message queue.
+                // Stop receiving.
                 _incoming.CompleteAdding();
 
+                // Wait for the outgoing message queue to drain.
                 int remainingMessageCount = 0;
                 DateTime then = DateTime.Now;
                 while (DateTime.Now - then < FlushTimeout)
@@ -233,8 +239,16 @@ namespace LSP.Client.Protocol
                     Log.Warning("Failed to flush outgoing messages ({RemainingMessageCount} messages remaining).", _outgoing.Count);
             }
 
+            // Cancel all outstanding requests.
+            // This should not be necessary because request cancellation tokens should be linked to _cancellationSource, but better to be sure we won't leave a caller hanging.
+            foreach (TaskCompletionSource<ServerMessage> responseCompletion in _responseCompletions.Values)
+            {
+                responseCompletion.TrySetException(
+                    new OperationCanceledException("The request was canceled because the underlying connection was closed.")
+                );
+            }
+
             _cancellationSource?.Cancel();
-            _cancellationSource = null;
             _sendLoop = null;
             _receiveLoop = null;
             _dispatchLoop = null;
@@ -248,6 +262,12 @@ namespace LSP.Client.Protocol
         /// </param>
         public void SendNotification(string method)
         {
+            if (string.IsNullOrWhiteSpace(method))
+                throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(method)}.", nameof(method));
+
+            if (!IsOpen)
+                throw new InvalidOperationException("Not connected to the language server.");
+
             _outgoing.TryAdd(new ClientMessage
             {
                 // No Id means it's a notification.
@@ -267,6 +287,15 @@ namespace LSP.Client.Protocol
         /// </param>
         public void SendNotification(string method, object notification)
         {
+            if (string.IsNullOrWhiteSpace(method))
+                throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(method)}.", nameof(method));
+
+            if (notification == null)
+                throw new ArgumentNullException(nameof(notification));
+
+            if (!IsOpen)
+                throw new InvalidOperationException("Not connected to the language server.");
+
             _outgoing.TryAdd(new ClientMessage
             {
                 // No Id means it's a notification.
@@ -298,24 +327,32 @@ namespace LSP.Client.Protocol
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
 
+            if (!IsOpen)
+                throw new InvalidOperationException("Not connected to the language server.");
+
             string requestId = Interlocked.Increment(ref _nextRequestId).ToString();
 
-            TaskCompletionSource<ServerMessage> completion = new TaskCompletionSource<ServerMessage>(state: requestId);
+            TaskCompletionSource<ServerMessage> responseCompletion = new TaskCompletionSource<ServerMessage>(state: requestId);
             cancellationToken.Register(() =>
             {
-                completion.TrySetCanceled(cancellationToken);
+                responseCompletion.TrySetException(
+                    new OperationCanceledException("The request was canceled via the supplied cancellation token.", cancellationToken)
+                );
 
                 // Send notification telling server to cancel the request, if possible.
-                _outgoing.TryAdd(new ClientMessage
+                if (!_outgoing.IsAddingCompleted)
                 {
-                    Method = "$/cancelRequest",
-                    Params = new JObject(
-                        new JProperty("id", requestId)
-                    )
-                });
+                    _outgoing.TryAdd(new ClientMessage
+                    {
+                        Method = "$/cancelRequest",
+                        Params = new JObject(
+                            new JProperty("id", requestId)
+                        )
+                    });
+                }
             });
 
-            _responseCompletions.TryAdd(requestId, completion);
+            _responseCompletions.TryAdd(requestId, responseCompletion);
 
             _outgoing.TryAdd(new ClientMessage
             {
@@ -324,7 +361,7 @@ namespace LSP.Client.Protocol
                 Params = request != null ? JObject.FromObject(request) : null
             });
 
-            await completion.Task;
+            await responseCompletion.Task;
         }
 
         /// <summary>
@@ -353,24 +390,32 @@ namespace LSP.Client.Protocol
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
 
+            if (!IsOpen)
+                throw new InvalidOperationException("Not connected to the language server.");
+
             string requestId = Interlocked.Increment(ref _nextRequestId).ToString();
 
-            TaskCompletionSource<ServerMessage> completion = new TaskCompletionSource<ServerMessage>(state: requestId);
+            TaskCompletionSource<ServerMessage> responseCompletion = new TaskCompletionSource<ServerMessage>(state: requestId);
             cancellationToken.Register(() =>
             {
-                completion.TrySetCanceled(cancellationToken);
+                responseCompletion.TrySetException(
+                    new OperationCanceledException("The request was canceled via the supplied cancellation token.", cancellationToken)
+                );
 
                 // Send notification telling server to cancel the request, if possible.
-                _outgoing.TryAdd(new ClientMessage
+                if (!_outgoing.IsAddingCompleted)
                 {
-                    Method = "$/cancelRequest",
-                    Params = new JObject(
-                        new JProperty("id", requestId)
-                    )
-                });
+                    _outgoing.TryAdd(new ClientMessage
+                    {
+                        Method = "$/cancelRequest",
+                        Params = new JObject(
+                            new JProperty("id", requestId)
+                        )
+                    });
+                }
             });
 
-            _responseCompletions.TryAdd(requestId, completion);
+            _responseCompletions.TryAdd(requestId, responseCompletion);
 
             _outgoing.TryAdd(new ClientMessage
             {
@@ -379,7 +424,7 @@ namespace LSP.Client.Protocol
                 Params = request != null ? JObject.FromObject(request) : null
             });
 
-            ServerMessage response = await completion.Task;
+            ServerMessage response = await responseCompletion.Task;
 
             if (response.Result != null)
                 return response.Result.ToObject<TResponse>();
@@ -404,36 +449,24 @@ namespace LSP.Client.Protocol
                     if (outgoing is ClientMessage message)
                     {
                         if (message.Id != null)
-                            Log.Information("Sending outgoing {RequestMethod} request {RequestId}...", message.Method, message.Id);
+                            Log.Verbose("Sending outgoing {RequestMethod} request {RequestId}...", message.Method, message.Id);
                         else
-                            Log.Information("Sending outgoing {RequestMethod} notification...", message.Method);
+                            Log.Verbose("Sending outgoing {RequestMethod} notification...", message.Method);
 
-                        string requestPayload = JsonConvert.SerializeObject(message);
-
-                        byte[] buffer = _encoding.GetBytes(
-                            $"Content-Length: {requestPayload.Length}\r\n\r\n{requestPayload}"
-                        );
-                        await _output.WriteAsync(buffer, 0, buffer.Length, _cancellation);
-                        await _output.FlushAsync(_cancellation);
+                        await SendMessage(message);
 
                         if (message.Id != null)
-                            Log.Information("Sent outgoing {RequestMethod} request {RequestId}.", message.Method, message.Id);
+                            Log.Verbose("Sent outgoing {RequestMethod} request {RequestId}.", message.Method, message.Id);
                         else
-                            Log.Information("Sent outgoing {RequestMethod} notification.", message.Method);
+                            Log.Verbose("Sent outgoing {RequestMethod} notification.", message.Method);
                     }
                     else if (outgoing is JsonRpc.Error errorResponse)
                     {
-                        Log.Information("Sending outgoing error response {RequestId} ({ErrorMessage})...", errorResponse.Id, errorResponse.Message);
+                        Log.Verbose("Sending outgoing error response {RequestId} ({ErrorMessage})...", errorResponse.Id, errorResponse.Message);
 
-                        string requestPayload = JsonConvert.SerializeObject(errorResponse);
+                        await SendMessage(errorResponse);
 
-                        byte[] buffer = _encoding.GetBytes(
-                            $"Content-Length: {requestPayload.Length}\r\n\r\n{requestPayload}"
-                        );
-                        await _output.WriteAsync(buffer, 0, buffer.Length, _cancellation);
-                        await _output.FlushAsync(_cancellation);
-
-                        Log.Information("Sent outgoing error response {RequestId}.", errorResponse.Id);
+                        Log.Verbose("Sent outgoing error response {RequestId}.", errorResponse.Id);
                     }
                     else
                         Log.Error("Unexpected outgoing message type '{0}'.", outgoing.GetType().AssemblyQualifiedName);
@@ -462,6 +495,9 @@ namespace LSP.Client.Protocol
                 while (!_cancellation.IsCancellationRequested && !_incoming.IsAddingCompleted)
                 {
                     ServerMessage message = await ReceiveMessage();
+                    if (message == null)
+                        continue;
+
                     if (message.Id != null)
                     {
                         // Request or response.
@@ -512,7 +548,7 @@ namespace LSP.Client.Protocol
                             }
                             else
                             {
-                                Log.Information("Received unexpected response {RequestId} from language server: {ResponseResult}",
+                                Log.Verbose("Received unexpected response {RequestId} from language server: {ResponseResult}",
                                     requestId,
                                     message.Result?.ToString(Formatting.None)
                                 );
@@ -522,7 +558,7 @@ namespace LSP.Client.Protocol
                     else
                     {
                         // Notification.
-                        Log.Information("Received {NotificationMethod} notification from language server: {NotificationParameters}",
+                        Log.Verbose("Received {NotificationMethod} notification from language server: {NotificationParameters}",
                             message.Method,
                             message.Params.ToString(Formatting.None)
                         );
@@ -539,6 +575,35 @@ namespace LSP.Client.Protocol
                 if (operationCanceled.CancellationToken != _cancellation)
                     throw; // time to die
             }
+        }
+
+        /// <summary>
+        ///     Send a message to the language server.
+        /// </summary>
+        /// <typeparam name="TMessage">
+        ///     The type of message to send.
+        /// </typeparam>
+        /// <param name="message">
+        ///     The message to send.
+        /// </param>
+        /// <returns>
+        ///     A <see cref="Task"/> representing the operation.
+        /// </returns>
+        async Task SendMessage<TMessage>(TMessage message)
+            where TMessage : class
+        {
+            if (message == null)
+                throw new ArgumentNullException(nameof(message));
+
+            string payload = JsonConvert.SerializeObject(message);
+            byte[] payloadBuffer = PayloadEncoding.GetBytes(payload);
+
+            byte[] headerBuffer = HeaderEncoding.GetBytes(
+                $"Content-Length: {payloadBuffer.Length}\r\n\r\n"
+            );
+            await _output.WriteAsync(headerBuffer, 0, headerBuffer.Length, _cancellation);
+            await _output.WriteAsync(payloadBuffer, 0, payloadBuffer.Length, _cancellation);
+            await _output.FlushAsync(_cancellation);
         }
 
         /// <summary>
@@ -577,7 +642,7 @@ namespace LSP.Client.Protocol
                 bytesRead += additionalBytesRead;
             }
 
-            string headers = Encoding.ASCII.GetString(buffer, 0, bytesRead);
+            string headers = HeaderEncoding.GetString(buffer, 0, bytesRead);
             Log.Verbose("Got raw headers: {Headers}", headers);
 
             if (String.IsNullOrWhiteSpace(headers))
@@ -612,7 +677,7 @@ namespace LSP.Client.Protocol
 
             Log.Verbose("Received entire payload ({ReceivedByteCount} bytes).", received);
 
-            string responseBody = Encoding.UTF8.GetString(requestBuffer);
+            string responseBody = PayloadEncoding.GetString(requestBuffer);
             ServerMessage message = JsonConvert.DeserializeObject<ServerMessage>(responseBody);
 
             Log.Verbose("Read response body {ResponseBody}.", responseBody);
@@ -669,7 +734,7 @@ namespace LSP.Client.Protocol
                 throw new ArgumentNullException(nameof(requestMessage));
 
             string requestId = requestMessage.Id.ToString();
-            Log.Information("Dispatching incoming {RequestMethod} request {RequestId}...", requestMessage.Method, requestId);
+            Log.Verbose("Dispatching incoming {RequestMethod} request {RequestId}...", requestMessage.Method, requestId);
 
             CancellationTokenSource requestCancellation = CancellationTokenSource.CreateLinkedTokenSource(_cancellation);
             _requestCancellations.TryAdd(requestId, requestCancellation);
@@ -705,7 +770,7 @@ namespace LSP.Client.Protocol
                 }
                 else if (handlerTask.IsCompleted)
                 {
-                    Log.Information("{RequestMethod} request {RequestId} complete (Result = {@Result}).", requestMessage.Method, requestId, handlerTask.Result);
+                    Log.Verbose("{RequestMethod} request {RequestId} complete (Result = {@Result}).", requestMessage.Method, requestId, handlerTask.Result);
 
                     _outgoing.TryAdd(new ClientMessage
                     {
@@ -720,7 +785,7 @@ namespace LSP.Client.Protocol
             });
 #pragma warning restore CS4014 // Continuation does the work we need; no need to await it as this would tie up the dispatch loop.
 
-            Log.Information("Dispatched incoming {RequestMethod} request {RequestId}.", requestMessage.Method, requestMessage.Id);
+            Log.Verbose("Dispatched incoming {RequestMethod} request {RequestId}.", requestMessage.Method, requestMessage.Id);
         }
 
         /// <summary>
@@ -767,16 +832,16 @@ namespace LSP.Client.Protocol
             if (notificationMessage == null)
                 throw new ArgumentNullException(nameof(notificationMessage));
 
-            Log.Information("Dispatching incoming {NotificationMethod} notification...", notificationMessage.Method);
+            Log.Verbose("Dispatching incoming {NotificationMethod} notification...", notificationMessage.Method);
 
             bool handled;
 
             try
             {
                 if (notificationMessage.Params != null)
-                    handled = _dispatcher.TryHandleEmptyNotification(notificationMessage.Method);
-                else
                     handled = _dispatcher.TryHandleNotification(notificationMessage.Method, notificationMessage.Params);
+                else
+                    handled = _dispatcher.TryHandleEmptyNotification(notificationMessage.Method);
             }
             catch (Exception handlerError)
             {

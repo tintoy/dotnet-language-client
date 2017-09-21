@@ -1,6 +1,5 @@
 ﻿using Common;
 using Lsp.Capabilities.Client;
-using Lsp.Models;
 using LSP.Client;
 using Newtonsoft.Json.Linq;
 using Serilog;
@@ -92,9 +91,11 @@ namespace Client
                 });
 
                 // Listen for our custom notification from the language server.
-                client.HandleNotification("dummy/notify", () =>
+                client.HandleNotification<DummyParams>("dummy/notify", notification =>
                 {
-                    Log.Information("Received dummy notification from language server.");
+                    Log.Information("Received dummy notification from language server: {Message}",
+                        notification.Message
+                    );
                 });
 
                 await client.Initialize(workspaceRoot: @"C:\Foo");

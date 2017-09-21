@@ -151,7 +151,8 @@ namespace VisualStudioExtension
                 MinHeight = 50,
                 Foreground = GetVSBrush(VsBrushes.HelpHowDoIPaneTextKey),
                 Background = Brushes.Transparent,
-                BorderBrush = Brushes.Transparent
+                BorderBrush = Brushes.Transparent,
+                Focusable = false
             });
 
             Span span = session.TextView.TextSnapshot.GetSpan(hover.Range);
