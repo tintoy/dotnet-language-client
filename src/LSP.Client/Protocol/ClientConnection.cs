@@ -49,7 +49,7 @@ namespace LSP.Client.Protocol
         /// <summary>
         ///     <see cref="TaskCompletionSource{TResult}"/>s representing completion of responses from the language server (keyed by request Id).
         /// </summary>
-        readonly ConcurrentDictionary<int, TaskCompletionSource<ServerMessage>> _responseCompletions = new ConcurrentDictionary<int, TaskCompletionSource<ServerMessage>>();
+        readonly ConcurrentDictionary<object, TaskCompletionSource<ServerMessage>> _responseCompletions = new ConcurrentDictionary<object, TaskCompletionSource<ServerMessage>>();
 
         /// <summary>
         ///     The input stream.
@@ -441,9 +441,9 @@ namespace LSP.Client.Protocol
             }
             catch (OperationCanceledException operationCanceled)
             {
-                // Like tears in rain, time to die.
+                // Like tears in rain
                 if (operationCanceled.CancellationToken != _cancellation)
-                    throw;
+                    throw; // time to die
             }
         }
 
@@ -461,78 +461,13 @@ namespace LSP.Client.Protocol
             {
                 while (!_cancellation.IsCancellationRequested && !_incoming.IsAddingCompleted)
                 {
-                    Log.Verbose("Reading response headers...");
-
-                    byte[] buffer = new byte[300];
-                    int bytesRead = await _input.ReadAsync(buffer, 0, MinimumHeaderLength, _cancellation);
-
-                    Log.Verbose("Read {ByteCount} bytes from input stream.", bytesRead);
-
-                    if (bytesRead == 0)
-                        return; // Stream closed.
-
-                    const byte CR = (byte)'\r';
-                    const byte LF = (byte)'\n';
-
-                    while (bytesRead < MinimumHeaderLength ||
-                           buffer[bytesRead - 4] != CR || buffer[bytesRead - 3] != LF ||
-                           buffer[bytesRead - 2] != CR || buffer[bytesRead - 1] != LF)
-                    {
-                        Log.Verbose("Reading additional data from input stream...");
-
-                        var additionalBytesRead = await _input.ReadAsync(buffer, bytesRead, 1, _cancellation);
-                        if (additionalBytesRead == 0)
-                            return; // no more _input, mitigates endless loop here.
-
-                        Log.Verbose("Read {ByteCount} bytes of additional data from input stream.", additionalBytesRead);
-
-                        bytesRead += additionalBytesRead;
-                    }
-
-                    string headers = Encoding.ASCII.GetString(buffer, 0, bytesRead);
-                    Log.Verbose("Got raw headers: {Headers}", headers);
-
-                    if (String.IsNullOrWhiteSpace(headers))
-                        return; // Stream closed.
-
-                    Log.Verbose("Read response headers {Headers}.", headers);
-
-                    int contentLength = Int32.Parse(
-                        headers.Substring("Content-Length: ".Length).Trim()
-                    );
-
-                    Log.Verbose("Reading response body ({ExpectedByteCount} bytes expected).", contentLength);
-
-                    var requestBuffer = new byte[contentLength];
-                    var received = 0;
-                    while (received < contentLength)
-                    {
-                        Log.Verbose("Reading segment of incoming request body ({ReceivedByteCount} of {TotalByteCount} bytes so far)...", received, contentLength);
-
-                        var payloadBytesRead = await _input.ReadAsync(requestBuffer, received, requestBuffer.Length - received, _cancellation);
-                        if (payloadBytesRead == 0)
-                        {
-                            Log.Warning("Bailing out of reading payload (no_more_input after {ByteCount} bytes)...", received);
-
-                            return;
-                        }
-
-                        Log.Verbose("Read segment of incoming request body ({ReceivedByteCount} of {TotalByteCount} bytes so far).", received, contentLength);
-
-                        received += payloadBytesRead;
-                    }
-
-                    Log.Verbose("Received entire payload ({ReceivedByteCount} bytes).", received);
-
-                    string responseBody = Encoding.UTF8.GetString(requestBuffer);
-                    ServerMessage message = JsonConvert.DeserializeObject<ServerMessage>(responseBody);
-                    Log.Verbose("Read response body {ResponseBody}.", responseBody);
-
+                    ServerMessage message = await ReceiveMessage();
                     if (message.Id != null)
                     {
+                        // Request or response.
                         if (message.Params != null)
                         {
-                            // Request from server.
+                            // Request.
                             Log.Verbose("Received {RequestMethod} request {RequestId} from language server: {RequestParameters}",
                                 message.Method,
                                 message.Id,
@@ -545,15 +480,15 @@ namespace LSP.Client.Protocol
                         }
                         else
                         {
-                            // Response from server.
-                            int requestId = Convert.ToInt32(message.Id);
+                            // Response.
+                            object requestId = message.Id;
                             TaskCompletionSource<ServerMessage> completion;
                             if (_responseCompletions.TryGetValue(requestId, out completion))
                             {
                                 if (message.ErrorMessage != null)
                                 {
                                     Log.Verbose("Received error response {RequestId} from language server: {@ErrorMessage}",
-                                        message.Id,
+                                        requestId,
                                         message.ErrorMessage
                                     );
 
@@ -566,7 +501,7 @@ namespace LSP.Client.Protocol
                                 else
                                 {
                                     Log.Verbose("Received response {RequestId} from language server: {ResponseResult}",
-                                        message.Id,
+                                        requestId,
                                         message.Result?.ToString(Formatting.None)
                                     );
 
@@ -578,7 +513,7 @@ namespace LSP.Client.Protocol
                             else
                             {
                                 Log.Information("Received unexpected response {RequestId} from language server: {ResponseResult}",
-                                    message.Id,
+                                    requestId,
                                     message.Result?.ToString(Formatting.None)
                                 );
                             }
@@ -586,6 +521,7 @@ namespace LSP.Client.Protocol
                     }
                     else
                     {
+                        // Notification.
                         Log.Information("Received {NotificationMethod} notification from language server: {NotificationParameters}",
                             message.Method,
                             message.Params.ToString(Formatting.None)
@@ -599,10 +535,89 @@ namespace LSP.Client.Protocol
             }
             catch (OperationCanceledException operationCanceled)
             {
-                // Like tears in rain, time to die.
+                // Like tears in rain
                 if (operationCanceled.CancellationToken != _cancellation)
-                    throw;
+                    throw; // time to die
             }
+        }
+
+        /// <summary>
+        ///     Receive a message from the language server.
+        /// </summary>
+        /// <returns>
+        ///     A <see cref="ServerMessage"/> representing the message,
+        /// </returns>
+        async Task<ServerMessage> ReceiveMessage()
+        {
+            Log.Verbose("Reading response headers...");
+
+            byte[] buffer = new byte[300];
+            int bytesRead = await _input.ReadAsync(buffer, 0, MinimumHeaderLength, _cancellation);
+
+            Log.Verbose("Read {ByteCount} bytes from input stream.", bytesRead);
+
+            if (bytesRead == 0)
+                return null; // Stream closed.
+
+            const byte CR = (byte)'\r';
+            const byte LF = (byte)'\n';
+
+            while (bytesRead < MinimumHeaderLength ||
+                   buffer[bytesRead - 4] != CR || buffer[bytesRead - 3] != LF ||
+                   buffer[bytesRead - 2] != CR || buffer[bytesRead - 1] != LF)
+            {
+                Log.Verbose("Reading additional data from input stream...");
+
+                var additionalBytesRead = await _input.ReadAsync(buffer, bytesRead, 1, _cancellation);
+                if (additionalBytesRead == 0)
+                    return null; // no more _input, mitigates endless loop here.
+
+                Log.Verbose("Read {ByteCount} bytes of additional data from input stream.", additionalBytesRead);
+
+                bytesRead += additionalBytesRead;
+            }
+
+            string headers = Encoding.ASCII.GetString(buffer, 0, bytesRead);
+            Log.Verbose("Got raw headers: {Headers}", headers);
+
+            if (String.IsNullOrWhiteSpace(headers))
+                return null; // Stream closed.
+
+            Log.Verbose("Read response headers {Headers}.", headers);
+
+            int contentLength = Int32.Parse(
+                headers.Substring("Content-Length: ".Length).Trim()
+            );
+
+            Log.Verbose("Reading response body ({ExpectedByteCount} bytes expected).", contentLength);
+
+            var requestBuffer = new byte[contentLength];
+            var received = 0;
+            while (received < contentLength)
+            {
+                Log.Verbose("Reading segment of incoming request body ({ReceivedByteCount} of {TotalByteCount} bytes so far)...", received, contentLength);
+
+                var payloadBytesRead = await _input.ReadAsync(requestBuffer, received, requestBuffer.Length - received, _cancellation);
+                if (payloadBytesRead == 0)
+                {
+                    Log.Warning("Bailing out of reading payload (no_more_input after {ByteCount} bytes)...", received);
+
+                    return null;
+                }
+
+                Log.Verbose("Read segment of incoming request body ({ReceivedByteCount} of {TotalByteCount} bytes so far).", received, contentLength);
+
+                received += payloadBytesRead;
+            }
+
+            Log.Verbose("Received entire payload ({ReceivedByteCount} bytes).", received);
+
+            string responseBody = Encoding.UTF8.GetString(requestBuffer);
+            ServerMessage message = JsonConvert.DeserializeObject<ServerMessage>(responseBody);
+
+            Log.Verbose("Read response body {ResponseBody}.", responseBody);
+
+            return message;
         }
 
         /// <summary>
@@ -636,9 +651,9 @@ namespace LSP.Client.Protocol
             }
             catch (OperationCanceledException operationCanceled)
             {
-                // Like tears in rain, time to die.
+                // Like tears in rain
                 if (operationCanceled.CancellationToken != _cancellation)
-                    throw;
+                    throw; // time to die
             }
         }
 
@@ -729,7 +744,13 @@ namespace LSP.Client.Protocol
                     Log.Verbose("Received cancellation message for non-existent (or already-completed) request ");
             }
             else
+            {
                 Log.Warning("Received invalid request cancellation message {MessageId} (missing 'id' parameter).", requestMessage.Id);
+
+                _outgoing.TryAdd(
+                    new JsonRpc.Server.Messages.InvalidParams(requestMessage.Id)
+                );
+            }
         }
 
         /// <summary>

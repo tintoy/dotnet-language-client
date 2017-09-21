@@ -1,4 +1,5 @@
-﻿using Lsp.Capabilities.Server;
+﻿using Lsp.Capabilities.Client;
+using Lsp.Capabilities.Server;
 using Lsp.Models;
 using Serilog;
 using System;
@@ -11,7 +12,6 @@ namespace LSP.Client
     using Clients;
     using Dispatcher;
     using Handlers;
-    using Lsp.Capabilities.Client;
     using Protocol;
 
     /// <summary>
@@ -115,6 +115,7 @@ namespace LSP.Client
             {
                 Synchronization = new SynchronizationCapability
                 {
+                    DidSave = true,
                     DynamicRegistration = false
                 },
                 Hover = new HoverCapability
