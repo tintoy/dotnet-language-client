@@ -201,18 +201,17 @@ namespace LSP.Client
 
             InitializeParams initializeParams = new InitializeParams
             {
-                //RootPath = workspaceRoot,
-                RootUri = new Uri("file:" + workspaceRoot.Replace('\\', '/')),
+                RootPath = workspaceRoot,
                 Capabilities = ClientCapabilities,
                 ProcessId = Process.GetCurrentProcess().Id
             };
 
-            Trace.WriteLine("Sending 'initialize' message to language server...");
+            Log.Verbose("Sending 'initialize' message to language server...");
 
             InitializeResult result = await SendRequest<InitializeResult>("initialize", initializeParams, cancellationToken).ConfigureAwait(false);
             ServerCapabilities = result.Capabilities;
 
-            Trace.WriteLine("Sent 'initialize' message to language server.");
+            Log.Verbose("Sent 'initialize' message to language server.");
 
             IsInitialized = true;
             _readyCompletion.SetResult(null);

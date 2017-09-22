@@ -105,36 +105,18 @@ namespace Client
                     Log.Information("Language server says: [{MessageType}] {Message}", messageType, message);
                 });
 
-                // Listen for our custom notification from the language server.
-                //client.HandleNotification<DummyParams>("dummy/notify", notification =>
-                //{
-                //    Log.Information("Received dummy notification from language server: {Message}",
-                //        notification.Message
-                //    );
-                //});
-
                 await client.Initialize(workspaceRoot: @"D:\Development\go\src\github.com\sourcegraph\go-langserver");
 
                 Log.Information("Client started.");
 
-                // Update server configuration.
-                //client.Workspace.DidChangeConfiguration(
-                //    new JObject(
-                //        new JProperty("setting1", true),
-                //        new JProperty("setting2", "Hello")
-                //    )
-                //);
+                Log.Information("Notifying language server of document open...");
 
                 client.TextDocument.DidOpen(@"D:\Development\go\src\github.com\sourcegraph\go-langserver\main.go", "go");
 
-                // Invoke our custom handler.
-                //await client.SendRequest("dummy", new DummyParams
-                //{
-                //    Message = "Hello, world!"
-                //});
+                Log.Information("Asking language server for hover info...");
 
                 Hover hover = await client.TextDocument.Hover(
-                    new Uri("file:" + @"D:\Development\go\src\github.com\sourcegraph\go-langserver\main.go".Replace('\\', '/')),
+                    @"D:\Development\go\src\github.com\sourcegraph\go-langserver\main.go",
                     line: 63,
                     column: 19
                 );
