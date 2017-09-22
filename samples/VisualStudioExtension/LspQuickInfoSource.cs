@@ -129,10 +129,11 @@ namespace VisualStudioExtension
 
             quickInfoContent.Clear();
 
+            // Quick-and-dirty rendering of Markdown content for display in VS (WPF) UI:
+
             string hoverContent = String.Join("\n---\n", hover.Contents.Select(
                 section => section.Value
             ));
-
             quickInfoContent.Add(new RichTextBox
             {
                 Document = MarkdownRenderer.Transform(hoverContent),
