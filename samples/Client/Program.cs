@@ -1,5 +1,6 @@
 ﻿using Common;
 using Lsp.Capabilities.Client;
+using Lsp.Models;
 using LSP.Client;
 using Newtonsoft.Json.Linq;
 using Serilog;
@@ -63,9 +64,9 @@ namespace Client
         /// </returns>
         static async Task AsyncMain()
         {
-            ProcessStartInfo serverStartInfo = new ProcessStartInfo("dotnet")
+            ProcessStartInfo serverStartInfo = new ProcessStartInfo(@"D:\Development\go\bin\go-langserver.exe")
             {
-                Arguments = $"\"{ServerAssembly}\""
+                Arguments = @"-mode stdio -logfile ""D:\Stage\go-langserver.log"""
             };
 
             Log.Information("Starting server...");
@@ -73,6 +74,20 @@ namespace Client
             {
                 ClientCapabilities =
                 {
+                    TextDocument = new TextDocumentClientCapabilities
+                    {
+                        Hover = new HoverCapability
+                        {
+                            DynamicRegistration = false
+                        },
+                        Synchronization = new SynchronizationCapability
+                        {
+                            DidSave = true,
+                            WillSave = false,
+                            WillSaveWaitUntil = false,
+                            DynamicRegistration = false
+                        }
+                    },
                     Workspace =
                     {
                         DidChangeConfiguration = new DidChangeConfigurationCapability
@@ -91,30 +106,42 @@ namespace Client
                 });
 
                 // Listen for our custom notification from the language server.
-                client.HandleNotification<DummyParams>("dummy/notify", notification =>
-                {
-                    Log.Information("Received dummy notification from language server: {Message}",
-                        notification.Message
-                    );
-                });
+                //client.HandleNotification<DummyParams>("dummy/notify", notification =>
+                //{
+                //    Log.Information("Received dummy notification from language server: {Message}",
+                //        notification.Message
+                //    );
+                //});
 
-                await client.Initialize(workspaceRoot: @"C:\Foo");
+                await client.Initialize(workspaceRoot: @"D:\Development\go\src\github.com\sourcegraph\go-langserver");
 
                 Log.Information("Client started.");
 
                 // Update server configuration.
-                client.Workspace.DidChangeConfiguration(
-                    new JObject(
-                        new JProperty("setting1", true),
-                        new JProperty("setting2", "Hello")
-                    )
-                );
+                //client.Workspace.DidChangeConfiguration(
+                //    new JObject(
+                //        new JProperty("setting1", true),
+                //        new JProperty("setting2", "Hello")
+                //    )
+                //);
+
+                client.TextDocument.DidOpen(@"D:\Development\go\src\github.com\sourcegraph\go-langserver\main.go", "go");
 
                 // Invoke our custom handler.
-                await client.SendRequest("dummy", new DummyParams
-                {
-                    Message = "Hello, world!"
-                });
+                //await client.SendRequest("dummy", new DummyParams
+                //{
+                //    Message = "Hello, world!"
+                //});
+
+                Hover hover = await client.TextDocument.Hover(
+                    new Uri("file:" + @"D:\Development\go\src\github.com\sourcegraph\go-langserver\main.go".Replace('\\', '/')),
+                    line: 63,
+                    column: 19
+                );
+                if (hover != null)
+                    Log.Information("Got hover: {@Hover}", hover);
+                else
+                    Log.Information("No hover provided.");
 
                 Log.Information("Stopping language server...");
                 await client.Shutdown();

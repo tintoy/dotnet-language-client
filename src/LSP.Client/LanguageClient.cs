@@ -201,7 +201,8 @@ namespace LSP.Client
 
             InitializeParams initializeParams = new InitializeParams
             {
-                RootPath = workspaceRoot,
+                //RootPath = workspaceRoot,
+                RootUri = new Uri("file:" + workspaceRoot.Replace('\\', '/')),
                 Capabilities = ClientCapabilities,
                 ProcessId = Process.GetCurrentProcess().Id
             };
