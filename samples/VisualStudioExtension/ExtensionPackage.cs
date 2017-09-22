@@ -102,9 +102,15 @@ namespace VisualStudioExtension
         /// <summary>
         ///     Called when the package is initialising.
         /// </summary>
-        /// <param name="cancellationToken"></param>
-        /// <param name="progress"></param>
-        /// <returns></returns>
+        /// <param name="cancellationToken">
+        ///     A <see cref="CancellationToken"/> that can be used to cancel the operation.
+        /// </param>
+        /// <param name="progress">
+        ///     The initialisation progress-reporting facility.
+        /// </param>
+        /// <returns>
+        ///     A <see cref="Task"/> representing package initialisation.
+        /// </returns>
         protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
         {
             Trace.WriteLine("Enter ExtensionPackage.InitializeAsync.");
@@ -117,13 +123,12 @@ namespace VisualStudioExtension
 
             OutputPane = GetOutputPane(PackageOutputPaneGuid, "LSP Demo");
             OutputPane.Activate();
-            OutputPane.OutputStringThreadSafe("Initialising...\n");
 
             await TaskScheduler.Default;
 
             try
             {
-                Trace.WriteLine("Creating language service...\n");
+                Trace.WriteLine("Creating language service...");
 
                 LanguageClient = new LanguageClient(new ProcessStartInfo("dotnet")
                 {
@@ -145,7 +150,6 @@ namespace VisualStudioExtension
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
                 Trace.WriteLine("Retrieving solution directory...");
-                OutputPane.OutputStringThreadSafe("Examining solution...\n");
 
                 IVsSolution solution = (IVsSolution)GetService(typeof(SVsSolution));
 
@@ -153,7 +157,6 @@ namespace VisualStudioExtension
                 ErrorHandler.ThrowOnFailure(hr);
 
                 Trace.WriteLine("Initialising language client...");
-                OutputPane.OutputString("Initialising language client...\n");
 
                 await TaskScheduler.Default;
 
@@ -162,24 +165,14 @@ namespace VisualStudioExtension
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
                 Trace.WriteLine("Language client initialised.");
-                OutputPane.OutputStringThreadSafe("Language client initialised.\n");
 
                 InitCompletion.TrySetResult(null);
-
-                OutputPane.OutputStringThreadSafe("Initialisation complete.\n");
             }
             catch (Exception languageClientError)
             {
                 Trace.WriteLine(languageClientError);
                 
                 InitCompletion.TrySetException(languageClientError);
-
-                ThreadHelper.JoinableTaskFactory.Run(async () =>
-                {
-                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-
-                    OutputPane.OutputStringThreadSafe($"Initialisation error: {languageClientError}\n");
-                });
             }
             finally
             {
@@ -187,11 +180,20 @@ namespace VisualStudioExtension
             }
         }
 
+        /// <summary>
+        ///     Called when the language client receives a log message from the language server.
+        /// </summary>
+        /// <param name="message">
+        ///     The message text.
+        /// </param>
+        /// <param name="messageType">
+        ///     The message type.
+        /// </param>
         async void LanguageClient_LogMessage(string message, MessageType messageType)
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-            OutputPane.OutputStringThreadSafe(message + "\n");
+            OutputPane.WriteLine("[{0}] {1}", messageType, message);
         }
     }
 }

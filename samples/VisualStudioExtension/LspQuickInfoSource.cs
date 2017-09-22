@@ -92,6 +92,9 @@ namespace VisualStudioExtension
 
             applicableToSpan = null;
 
+            if (!ExtensionPackage.LanguageClientInitialized.IsCompleted)
+                return; // Language service is not available yet.
+
             string fileName = session.TextView.TextBuffer.GetFileName();
             if (fileName == null)
                 return;
@@ -100,7 +103,7 @@ namespace VisualStudioExtension
             if (!triggerPoint.HasValue)
                 return;
 
-            (int line, int column) = triggerPoint.Value.GetLineAndColumn();
+            (int line, int column) = triggerPoint.Value.ToLineAndColumn();
 
             Hover hover = null;
 
@@ -111,15 +114,9 @@ namespace VisualStudioExtension
 
                 try
                 {
-                    Trace.WriteLine("Awaiting ExtensionPackage.LanguageClientInitializeTask...");
-
                     await ExtensionPackage.LanguageClientInitialized;
 
-                    Trace.WriteLine("Calling ExtensionPackage.LanguageClient.TextDocument.Hover...");
-
                     hover = await ExtensionPackage.LanguageClient.TextDocument.Hover(fileName, line, column);
-
-                    Trace.WriteLine("Called ExtensionPackage.LanguageClient.TextDocument.Hover.");
                 }
                 catch (Exception hoverError)
                 {
@@ -128,13 +125,7 @@ namespace VisualStudioExtension
             });
 
             if (hover == null)
-            {
-                Trace.WriteLine("No hover provided.");
-
                 return;
-            }
-
-            Trace.WriteLine("Hover provided by language service.");
 
             quickInfoContent.Clear();
 
@@ -158,61 +149,17 @@ namespace VisualStudioExtension
             Span span = session.TextView.TextSnapshot.GetSpan(hover.Range);
 
             applicableToSpan = session.TextView.TextSnapshot.CreateTrackingSpan(span, SpanTrackingMode.EdgeInclusive);
-
-            Trace.WriteLine("LspQuickInfoSource.AugmentQuickInfoSession complete.");
         }
 
+        /// <summary>
+        ///     Get the specified <see cref="Brush"/> from Visual Studio application resources.
+        /// </summary>
+        /// <param name="brushKey">
+        ///     An object from <see cref="VsBrushes"/> used as a resource key.
+        /// </param>
+        /// <returns>
+        ///     The <see cref="Brush"/>, or <c>null</c> if no resource was found with the specified key.
+        /// </returns>
         static Brush GetVSBrush(object brushKey) => (Brush)Application.Current.Resources[brushKey];
-    }
-
-    static class Extensions
-    {
-        public static SnapshotPoint GetPointInLine(this ITextSnapshot snapshot, long line, long column)
-        {
-            var snapshotLine = snapshot.GetLineFromLineNumber((int)line);
-            return snapshotLine.Start.Add((int)column);
-        }
-
-        public static (int line, int column) GetLineAndColumn(this SnapshotPoint snapshotPoint)
-        {
-            var line = snapshotPoint.GetContainingLine();
-            int lineNumber = line.LineNumber;
-            int columnNumber = snapshotPoint.Subtract(line.Start).Position;
-
-            return (lineNumber, columnNumber);
-        }
-
-        public static Span GetSpan(this ITextSnapshot textSnapshot, Range range)
-        {
-            SnapshotPoint start = textSnapshot.GetPointInLine(range.Start.Line, range.Start.Character);
-            SnapshotPoint end = textSnapshot.GetPointInLine(range.End.Line, range.End.Character);
-
-            return new Span(
-                start: start.Position,
-                length: end.Position - start.Position
-            );
-        }
-
-        public static string GetFileName(this ITextBuffer textBuffer)
-        {
-            if (textBuffer == null)
-                throw new ArgumentNullException(nameof(textBuffer));
-
-            IVsTextBuffer bufferAdapter;
-            textBuffer.Properties.TryGetProperty(typeof(IVsTextBuffer), out bufferAdapter);
-            if (bufferAdapter == null)
-                return null;
-
-            IPersistFileFormat persistFileFormat = bufferAdapter as IPersistFileFormat;
-            if (persistFileFormat == null)
-                return null;
-
-            string fileName = null;
-
-            int hr = persistFileFormat.GetCurFile(out fileName, out _);
-            ErrorHandler.ThrowOnFailure(hr);
-
-            return fileName;
-        }
     }
 }
