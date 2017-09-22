@@ -49,7 +49,7 @@ namespace VisualStudioExtension
             if (outputPane == null)
                 throw new ArgumentNullException(nameof(outputPane));
 
-            if (string.IsNullOrWhiteSpace(messageOrFormat))
+            if (String.IsNullOrWhiteSpace(messageOrFormat))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(messageOrFormat)}.", nameof(messageOrFormat));
             
             outputPane.WriteLine(

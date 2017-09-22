@@ -263,11 +263,11 @@ namespace LSP.Client.Protocol
         /// </param>
         public void SendNotification(string method)
         {
-            if (string.IsNullOrWhiteSpace(method))
+            if (String.IsNullOrWhiteSpace(method))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(method)}.", nameof(method));
 
             if (!IsOpen)
-                throw new InvalidOperationException("Not connected to the language server.");
+                throw new LspException("Not connected to the language server.");
 
             _outgoing.TryAdd(new ClientMessage
             {
@@ -288,14 +288,14 @@ namespace LSP.Client.Protocol
         /// </param>
         public void SendNotification(string method, object notification)
         {
-            if (string.IsNullOrWhiteSpace(method))
+            if (String.IsNullOrWhiteSpace(method))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(method)}.", nameof(method));
 
             if (notification == null)
                 throw new ArgumentNullException(nameof(notification));
 
             if (!IsOpen)
-                throw new InvalidOperationException("Not connected to the language server.");
+                throw new LspException("Not connected to the language server.");
 
             _outgoing.TryAdd(new ClientMessage
             {
@@ -329,7 +329,7 @@ namespace LSP.Client.Protocol
                 throw new ArgumentNullException(nameof(request));
 
             if (!IsOpen)
-                throw new InvalidOperationException("Not connected to the language server.");
+                throw new LspException("Not connected to the language server.");
 
             string requestId = Interlocked.Increment(ref _nextRequestId).ToString();
 
@@ -392,7 +392,7 @@ namespace LSP.Client.Protocol
                 throw new ArgumentNullException(nameof(request));
 
             if (!IsOpen)
-                throw new InvalidOperationException("Not connected to the language server.");
+                throw new LspException("Not connected to the language server.");
 
             string requestId = Interlocked.Increment(ref _nextRequestId).ToString();
 
@@ -522,18 +522,18 @@ namespace LSP.Client.Protocol
                             TaskCompletionSource<ServerMessage> completion;
                             if (_responseCompletions.TryGetValue(requestId, out completion))
                             {
-                                if (message.ErrorMessage != null)
+                                if (message.Error != null)
                                 {
                                     Log.Verbose("Received error response {RequestId} from language server: {@ErrorMessage}",
                                         requestId,
-                                        message.ErrorMessage
+                                        message.Error
                                     );
 
                                     Log.Verbose("Faulting request {RequestId}.", requestId);
 
-                                    completion.TrySetException(new JsonRpcException(
-                                        $"Error {message.ErrorMessage.Code}: {message.ErrorMessage.Message}"
-                                    ));
+                                    completion.TrySetException(
+                                        CreateLspException(message)
+                                    );
                                 }
                                 else
                                 {
@@ -890,6 +890,55 @@ namespace LSP.Client.Protocol
                 Log.Verbose("Dispatched incoming {NotificationMethod} notification.", notificationMessage.Method);
             else
                 Log.Verbose("Ignored incoming {NotificationMethod} notification (no handler registered).", notificationMessage.Method);
+        }
+
+        /// <summary>
+        ///     Create an <see cref="LspException"/> to represent the specified message.
+        /// </summary>
+        /// <param name="message">
+        ///     The <see cref="ServerMessage"/> (<see cref="ServerMessage.Error"/> must be populated).
+        /// </param>
+        /// <returns>
+        ///     The new <see cref="LspException"/>.
+        /// </returns>
+        static LspException CreateLspException(ServerMessage message)
+        {
+            if (message == null)
+                throw new ArgumentNullException(nameof(message));
+
+            Trace.Assert(message.Error != null, "message.Error != null");
+
+            string requestId = message.Id?.ToString();
+
+            switch (message.Error.Code)
+            {
+                case LspErrorCodes.InvalidRequest:
+                {
+                    return new LspInvalidRequestException(requestId);
+                }
+                case LspErrorCodes.InvalidParameters:
+                {
+                    return new LspInvalidParametersException(requestId);
+                }
+                case LspErrorCodes.InternalError:
+                {
+                    return new LspInternalErrorException(requestId);
+                }
+                case LspErrorCodes.MethodNotSupported:
+                {
+                    return new LspMethodNotSupportedException(requestId, message.Method);
+                }
+                case LspErrorCodes.RequestCancelled:
+                {
+                    return new LspRequestCancelledException(requestId);
+                }
+                default:
+                {
+                    string exceptionMessage = $"Error processing request '{message.Id}' ({message.Error.Code}): {message.Error.Message}";
+
+                    return new LspRequestException(exceptionMessage, requestId, message.Error.Code);
+                }
+            }
         }
     }
 }

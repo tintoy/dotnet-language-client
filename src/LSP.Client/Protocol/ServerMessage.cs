@@ -39,9 +39,9 @@ namespace LSP.Client.Protocol
         public JObject Result { get; set; }
 
         /// <summary>
-        ///     The response error message (if any).
+        ///     The response error (if any).
         /// </summary>
         [JsonProperty("error", DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate)]
-        public ErrorMessage ErrorMessage { get; set; }
+        public ErrorMessage Error { get; set; }
     }
 }

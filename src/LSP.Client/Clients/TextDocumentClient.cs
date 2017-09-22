@@ -95,7 +95,7 @@ namespace LSP.Client.Clients
         /// </returns>
         async Task<TResponse> PositionalRequest<TResponse>(string method, Uri documentUri, int line, int column, CancellationToken cancellationToken)
         {
-            if (string.IsNullOrWhiteSpace(method))
+            if (String.IsNullOrWhiteSpace(method))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(method)}.", nameof(method));
 
             if (documentUri == null)

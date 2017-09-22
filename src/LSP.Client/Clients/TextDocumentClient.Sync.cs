@@ -30,7 +30,7 @@ namespace LSP.Client.Clients
         /// </remarks>
         public void DidOpen(string filePath, string languageId, int version = 0)
         {
-            if (string.IsNullOrWhiteSpace(filePath))
+            if (String.IsNullOrWhiteSpace(filePath))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(filePath)}.", nameof(filePath));
 
             string text = null;
@@ -62,7 +62,7 @@ namespace LSP.Client.Clients
         /// </param>
         public void DidOpen(string filePath, string languageId, string text, int version = 0)
         {
-            if (string.IsNullOrWhiteSpace(filePath))
+            if (String.IsNullOrWhiteSpace(filePath))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(filePath)}.", nameof(filePath));
 
             Uri documentUri = DocumentUri.FromFileSystemPath(filePath);
@@ -121,7 +121,7 @@ namespace LSP.Client.Clients
         /// </remarks>
         public void DidChange(string filePath, string languageId, int version = 0)
         {
-            if (string.IsNullOrWhiteSpace(filePath))
+            if (String.IsNullOrWhiteSpace(filePath))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(filePath)}.", nameof(filePath));
 
             string text = null;
@@ -156,7 +156,7 @@ namespace LSP.Client.Clients
         /// </remarks>
         public void DidChange(string filePath, string languageId, string text, int version = 0)
         {
-            if (string.IsNullOrWhiteSpace(filePath))
+            if (String.IsNullOrWhiteSpace(filePath))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(filePath)}.", nameof(filePath));
 
             Uri documentUri = DocumentUri.FromFileSystemPath(filePath);
@@ -212,7 +212,7 @@ namespace LSP.Client.Clients
         /// </param>
         public void DidClose(string filePath)
         {
-            if (string.IsNullOrWhiteSpace(filePath))
+            if (String.IsNullOrWhiteSpace(filePath))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(filePath)}.", nameof(filePath));
 
             DidClose(
@@ -248,7 +248,7 @@ namespace LSP.Client.Clients
         /// </param>
         public void DidSave(string filePath)
         {
-            if (string.IsNullOrWhiteSpace(filePath))
+            if (String.IsNullOrWhiteSpace(filePath))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(filePath)}.", nameof(filePath));
 
             DidSave(

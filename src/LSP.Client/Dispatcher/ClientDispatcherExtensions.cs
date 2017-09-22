@@ -29,7 +29,7 @@ namespace LSP.Client.Dispatcher
             if (clientDispatcher == null)
                 throw new ArgumentNullException(nameof(clientDispatcher));
 
-            if (string.IsNullOrWhiteSpace(method))
+            if (String.IsNullOrWhiteSpace(method))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(method)}.", nameof(method));
 
             if (handler == null)
@@ -60,7 +60,7 @@ namespace LSP.Client.Dispatcher
             if (clientDispatcher == null)
                 throw new ArgumentNullException(nameof(clientDispatcher));
 
-            if (string.IsNullOrWhiteSpace(method))
+            if (String.IsNullOrWhiteSpace(method))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(method)}.", nameof(method));
 
             if (handler == null)
@@ -91,7 +91,7 @@ namespace LSP.Client.Dispatcher
             if (clientDispatcher == null)
                 throw new ArgumentNullException(nameof(clientDispatcher));
 
-            if (string.IsNullOrWhiteSpace(method))
+            if (String.IsNullOrWhiteSpace(method))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(method)}.", nameof(method));
 
             if (handler == null)
@@ -122,7 +122,7 @@ namespace LSP.Client.Dispatcher
             if (clientDispatcher == null)
                 throw new ArgumentNullException(nameof(clientDispatcher));
 
-            if (string.IsNullOrWhiteSpace(method))
+            if (String.IsNullOrWhiteSpace(method))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(method)}.", nameof(method));
 
             if (handler == null)

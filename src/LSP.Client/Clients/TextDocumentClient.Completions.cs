@@ -33,7 +33,7 @@ namespace LSP.Client.Clients
         /// </returns>
         public Task<CompletionList> Completions(string filePath, int line, int column, CancellationToken cancellationToken = default(CancellationToken))
         {
-            if (string.IsNullOrWhiteSpace(filePath))
+            if (String.IsNullOrWhiteSpace(filePath))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(filePath)}.", nameof(filePath));
 
             return PositionalRequest<CompletionList>("textDocument/completion", filePath, line, column, cancellationToken);

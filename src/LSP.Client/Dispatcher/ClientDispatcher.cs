@@ -61,7 +61,7 @@ namespace LSP.Client.Dispatcher
         /// </returns>
         public bool TryHandleEmptyNotification(string method)
         {
-            if (string.IsNullOrWhiteSpace(method))
+            if (String.IsNullOrWhiteSpace(method))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(method)}.", nameof(method));
 
             if (_handlers.TryGetValue(method, out IHandler handler) && handler is IInvokeEmptyNotificationHandler emptyNotificationHandler)
@@ -88,7 +88,7 @@ namespace LSP.Client.Dispatcher
         /// </returns>
         public bool TryHandleNotification(string method, JObject notification)
         {
-            if (string.IsNullOrWhiteSpace(method))
+            if (String.IsNullOrWhiteSpace(method))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(method)}.", nameof(method));
 
             if (_handlers.TryGetValue(method, out IHandler handler) && handler is IInvokeNotificationHandler notificationHandler)
@@ -118,7 +118,7 @@ namespace LSP.Client.Dispatcher
         /// </returns>
         public Task<object> TryHandleRequest(string method, JObject request, CancellationToken cancellationToken)
         {
-            if (string.IsNullOrWhiteSpace(method))
+            if (String.IsNullOrWhiteSpace(method))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(method)}.", nameof(method));
 
             if (_handlers.TryGetValue(method, out IHandler handler) && handler is IInvokeRequestHandler requestHandler)
