@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Serilog;
 using System;
+using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
@@ -650,9 +651,17 @@ namespace LSP.Client.Protocol
 
             Log.Verbose("Read response headers {Headers}.", headers);
 
-            int contentLength = Int32.Parse(
-                headers.Substring("Content-Length: ".Length).Trim()
-            );
+            Dictionary<string, string> parsedHeaders = ParseHeaders(headers);
+
+            string contentLengthHeader;
+            if (!parsedHeaders.TryGetValue("Content-Length", out contentLengthHeader))
+            {
+                Log.Verbose("Invalid request headers (missing 'Content-Length' header).");
+
+                return null;
+            }
+
+            int contentLength = Int32.Parse(contentLengthHeader);
 
             Log.Verbose("Reading response body ({ExpectedByteCount} bytes expected).", contentLength);
 
@@ -683,6 +692,33 @@ namespace LSP.Client.Protocol
             Log.Verbose("Read response body {ResponseBody}.", responseBody);
 
             return message;
+        }
+
+        /// <summary>
+        ///     Parse request headers.
+        /// </summary>
+        /// <param name="rawHeaders">
+        /// </param>
+        /// <returns>
+        ///     A <see cref="Dictionary{TKey, TValue}"/> containing the header names and values.
+        /// </returns>
+        private Dictionary<string, string> ParseHeaders(string rawHeaders)
+        {
+            if (rawHeaders == null)
+                throw new ArgumentNullException(nameof(rawHeaders));
+
+            Dictionary<string, string> headers = new Dictionary<string, string>();
+            string[] rawHeaderEntries = rawHeaders.Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+            foreach (string rawHeaderEntry in rawHeaderEntries)
+            {
+                string[] nameAndValue = rawHeaderEntry.Split(new char[] { ':' }, count: 2);
+                if (nameAndValue.Length != 2)
+                    continue;
+
+                headers[nameAndValue[0].Trim()] = nameAndValue[1].Trim();
+            }
+
+            return headers;
         }
 
         /// <summary>

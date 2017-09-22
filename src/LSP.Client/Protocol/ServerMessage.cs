@@ -41,7 +41,7 @@ namespace LSP.Client.Protocol
         /// <summary>
         ///     The response error message (if any).
         /// </summary>
-        [JsonProperty("message", DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate)]
+        [JsonProperty("error", DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate)]
         public ErrorMessage ErrorMessage { get; set; }
     }
 }
