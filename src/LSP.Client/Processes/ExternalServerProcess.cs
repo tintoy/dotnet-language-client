@@ -7,10 +7,10 @@ using System.Threading.Tasks;
 namespace LSP.Client.Launcher
 {
     /// <summary>
-    ///     An <see cref="ExternalProcessServerLauncher"/> is a <see cref="ServerLauncher"/> that launches its server as an external process.
+    ///     An <see cref="ExternalServerProcess"/> is a <see cref="ServerProcess"/> that launches its server as an external process.
     /// </summary>
-    public class ExternalProcessServerLauncher
-        : ServerLauncher
+    public class ExternalServerProcess
+        : ServerProcess
     {
         /// <summary>
         ///     A <see cref="ProcessStartInfo"/> that describes how to start the server.
@@ -23,12 +23,12 @@ namespace LSP.Client.Launcher
         Process _serverProcess;
 
         /// <summary>
-        ///     Create a new <see cref="ExternalProcessServerLauncher"/>.
+        ///     Create a new <see cref="ExternalServerProcess"/>.
         /// </summary>
         /// <param name="serverStartInfo">
         ///     A <see cref="ProcessStartInfo"/> that describes how to start the server.
         /// </param>
-        public ExternalProcessServerLauncher(ProcessStartInfo serverStartInfo)
+        public ExternalServerProcess(ProcessStartInfo serverStartInfo)
         {
             if (serverStartInfo == null)
                 throw new ArgumentNullException(nameof(serverStartInfo));

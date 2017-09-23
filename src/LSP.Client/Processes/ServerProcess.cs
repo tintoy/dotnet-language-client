@@ -6,15 +6,15 @@ using System.Threading.Tasks;
 namespace LSP.Client.Launcher
 {
     /// <summary>
-    ///     A <see cref="ServerLauncher"/> is responsible for launching or attaching to a language server, providing access to its input and output streams, and tracking its lifetime.
+    ///     A <see cref="ServerProcess"/> is responsible for launching or attaching to a language server, providing access to its input and output streams, and tracking its lifetime.
     /// </summary>
-    public abstract class ServerLauncher
+    public abstract class ServerProcess
         : IDisposable
     {
         /// <summary>
-        ///     Create a new <see cref="ServerLauncher"/>.
+        ///     Create a new <see cref="ServerProcess"/>.
         /// </summary>
-        protected ServerLauncher()
+        protected ServerProcess()
         {
             Log = Serilog.Log.ForContext(
                 source: GetType()
@@ -27,9 +27,9 @@ namespace LSP.Client.Launcher
         }
 
         /// <summary>
-        ///     Finaliser for <see cref="ServerLauncher"/>.
+        ///     Finaliser for <see cref="ServerProcess"/>.
         /// </summary>
-        ~ServerLauncher()
+        ~ServerProcess()
         {
             Dispose(false);
         }

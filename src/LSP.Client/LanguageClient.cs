@@ -35,9 +35,9 @@ namespace LSP.Client
         readonly DynamicRegistrationHandler _dynamicRegistrationHandler = new DynamicRegistrationHandler();
 
         /// <summary>
-        ///     Launcher for the server process.
+        ///     The server process.
         /// </summary>
-        ServerLauncher _serverLauncher;
+        ServerProcess _process;
 
         /// <summary>
         ///     The connection to the language server.
@@ -56,24 +56,24 @@ namespace LSP.Client
         ///     <see cref="ProcessStartInfo"/> used to start the server process.
         /// </param>
         public LanguageClient(ProcessStartInfo serverStartInfo)
-            : this(new ExternalProcessServerLauncher(serverStartInfo))
+            : this(new ExternalServerProcess(serverStartInfo))
         {
         }
 
         /// <summary>
         ///     Create a new <see cref="LanguageClient"/>.
         /// </summary>
-        /// <param name="serverLauncher">
-        ///     <see cref="ServerLauncher"/> used to start or connect to the server process.
+        /// <param name="process">
+        ///     <see cref="ServerProcess"/> used to start or connect to the server process.
         /// </param>
-        public LanguageClient(ServerLauncher serverLauncher)
+        public LanguageClient(ServerProcess process)
             : this()
         {
-            if (serverLauncher == null)
-                throw new ArgumentNullException(nameof(serverLauncher));
+            if (process == null)
+                throw new ArgumentNullException(nameof(process));
 
-            _serverLauncher = serverLauncher;
-            _serverLauncher.Exited += ServerProcess_Exit;
+            _process = process;
+            _process.Exited += ServerProcess_Exit;
         }
 
         /// <summary>
@@ -96,7 +96,7 @@ namespace LSP.Client
             ClientConnection connection = Interlocked.Exchange(ref _connection, null);
             connection?.Dispose();
 
-            ServerLauncher serverLauncher = Interlocked.Exchange(ref _serverLauncher, null);
+            ServerProcess serverLauncher = Interlocked.Exchange(ref _process, null);
             serverLauncher?.Dispose();
         }
 
@@ -183,7 +183,7 @@ namespace LSP.Client
             {
                 return Task.WhenAll(
                     _connection.HasClosed,
-                    _serverLauncher?.HasExited ?? Task.CompletedTask
+                    _process?.HasExited ?? Task.CompletedTask
                 );
             }
         }
@@ -210,33 +210,43 @@ namespace LSP.Client
             if (IsInitialized)
                 throw new InvalidOperationException("Client has already been initialised.");
 
-            await Start();
-
-            InitializeParams initializeParams = new InitializeParams
+            try
             {
-                RootPath = workspaceRoot,
-                Capabilities = ClientCapabilities,
-                ProcessId = Process.GetCurrentProcess().Id
-            };
+                await Start();
 
-            Log.Verbose("Sending 'initialize' message to language server...");
+                InitializeParams initializeParams = new InitializeParams
+                {
+                    RootPath = workspaceRoot,
+                    Capabilities = ClientCapabilities,
+                    ProcessId = Process.GetCurrentProcess().Id
+                };
 
-            InitializeResult result = await SendRequest<InitializeResult>("initialize", initializeParams, cancellationToken).ConfigureAwait(false);
-            if (result == null)
-                throw new LspException("Server replied to 'initialize' request with a null response.");
+                Log.Verbose("Sending 'initialize' message to language server...");
 
-            _dynamicRegistrationHandler.ServerCapabilities = result.Capabilities;
+                InitializeResult result = await SendRequest<InitializeResult>("initialize", initializeParams, cancellationToken).ConfigureAwait(false);
+                if (result == null)
+                    throw new LspException("Server replied to 'initialize' request with a null response.");
 
-            Log.Verbose("Sent 'initialize' message to language server.");
+                _dynamicRegistrationHandler.ServerCapabilities = result.Capabilities;
 
-            Log.Verbose("Sending 'initialized' notification to language server...");
+                Log.Verbose("Sent 'initialize' message to language server.");
 
-            SendEmptyNotification("initialized");
+                Log.Verbose("Sending 'initialized' notification to language server...");
 
-            Log.Verbose("Sent 'initialized' notification to language server.");
+                SendEmptyNotification("initialized");
 
-            IsInitialized = true;
-            _readyCompletion.SetResult(null);
+                Log.Verbose("Sent 'initialized' notification to language server.");
+
+                IsInitialized = true;
+                _readyCompletion.TrySetResult(null);
+            }
+            catch (Exception initializationError)
+            {
+                // Capture the initialisation error so anyone awaiting IsReady will also see it.
+                _readyCompletion.TrySetException(initializationError);
+
+                throw;
+            }
         }
 
         /// <summary>
@@ -260,7 +270,7 @@ namespace LSP.Client
                 await connection.HasClosed;
             }
 
-            ServerLauncher serverLauncher = _serverLauncher;
+            ServerProcess serverLauncher = _process;
             if (serverLauncher != null)
             {
                 if (serverLauncher.IsRunning)
@@ -374,14 +384,14 @@ namespace LSP.Client
         /// </returns>
         async Task Start()
         {
-            if (_serverLauncher == null)
+            if (_process == null)
                 throw new ObjectDisposedException(GetType().Name);
-            
-            if (!_serverLauncher.IsRunning)
+
+            if (!_process.IsRunning)
             {
                 Log.Verbose("Starting language server...");
 
-                await _serverLauncher.Start();
+                await _process.Start();
 
                 Log.Verbose("Language server is running.");
             }
@@ -389,7 +399,7 @@ namespace LSP.Client
             Log.Verbose("Opening connection to language server...");
 
             if (_connection == null)
-                _connection = new ClientConnection(_dispatcher, input: _serverLauncher.OutputStream, output: _serverLauncher.InputStream);
+                _connection = new ClientConnection(_dispatcher, input: _process.OutputStream, output: _process.InputStream);
 
             _connection.Open();
 

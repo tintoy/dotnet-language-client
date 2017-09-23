@@ -64,7 +64,7 @@ namespace SingleProcess
         /// </returns>
         static async Task AsyncMain()
         {
-            using (InProcessServerLauncher serverLauncher = new InProcessServerLauncher())
+            using (PipeServerProcess serverLauncher = new PipeServerProcess())
             {
                 await serverLauncher.Start();
 
@@ -79,12 +79,12 @@ namespace SingleProcess
         ///     Run a language client over the specified streams.
         /// </summary>
         /// <param name="serverLauncher">
-        ///     The <see cref="InProcessServerLauncher"/> used to wire up the client and server streams.
+        ///     The <see cref="PipeServerProcess"/> used to wire up the client and server streams.
         /// </param>
         /// <returns>
         ///     A <see cref="Task"/> representing the operation.
         /// </returns>
-        static async Task RunLanguageClient(InProcessServerLauncher serverLauncher)
+        static async Task RunLanguageClient(PipeServerProcess serverLauncher)
         {
             if (serverLauncher == null)
                 throw new ArgumentNullException(nameof(serverLauncher));

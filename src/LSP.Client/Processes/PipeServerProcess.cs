@@ -1,27 +1,24 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using System.IO;
 using System.IO.Pipes;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace LSP.Client.Launcher
 {
     /// <summary>
-    ///     An <see cref="InProcessServerLauncher"/> is a <see cref="ServerLauncher"/> that creates anonymous pipe streams to connect a language client to a language server in the same process.
+    ///     An <see cref="PipeServerProcess"/> is a <see cref="ServerProcess"/> that creates anonymous pipe streams to connect a language client to a language server in the same process.
     /// </summary>
-    public class InProcessServerLauncher
-        : ServerLauncher
+    public class PipeServerProcess
+        : ServerProcess
     {
         /// <summary>
-        ///     Create a new <see cref="InProcessServerLauncher"/>.
+        ///     Create a new <see cref="PipeServerProcess"/>.
         /// </summary>
-        public InProcessServerLauncher()
+        public PipeServerProcess()
         {
         }
 
         /// <summary>
-        ///     Dispose of resources being used by the <see cref="InProcessServerLauncher"/>.
+        ///     Dispose of resources being used by the <see cref="PipeServerProcess"/>.
         /// </summary>
         /// <param name="disposing">
         ///     Explicit disposal?
