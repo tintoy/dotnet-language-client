@@ -3,6 +3,7 @@ using Lsp;
 using Lsp.Capabilities.Client;
 using LSP.Client;
 using LSP.Client.Dispatcher;
+using LSP.Client.Launcher;
 using LSP.Client.Protocol;
 using Newtonsoft.Json.Linq;
 using Serilog;
@@ -63,42 +64,33 @@ namespace SingleProcess
         /// </returns>
         static async Task AsyncMain()
         {
-            using (AnonymousPipeServerStream serverInputStream = new AnonymousPipeServerStream(PipeDirection.In, HandleInheritability.None, bufferSize: 1024))
-            using (AnonymousPipeServerStream serverOutputStream = new AnonymousPipeServerStream(PipeDirection.Out, HandleInheritability.None, bufferSize: 1024))
-            using (AnonymousPipeClientStream clientInputStream = new AnonymousPipeClientStream(PipeDirection.In, serverOutputStream.ClientSafePipeHandle))
-            using (AnonymousPipeClientStream clientOutputStream = new AnonymousPipeClientStream(PipeDirection.Out, serverInputStream.ClientSafePipeHandle))
+            using (InProcessServerLauncher serverLauncher = new InProcessServerLauncher())
             {
-                Task clientTask = RunLanguageClient(clientInputStream, clientOutputStream);
-                Task serverTask = RunLanguageServer(serverInputStream, serverOutputStream);
+                await serverLauncher.Start();
 
-                await clientTask;
-                await serverTask;
+                Task clientTask = RunLanguageClient(serverLauncher);
+                Task serverTask = RunLanguageServer(input: serverLauncher.ClientOutputStream, output: serverLauncher.ClientInputStream);
+
+                await Task.WhenAll(clientTask, serverTask);
             }
         }
 
         /// <summary>
         ///     Run a language client over the specified streams.
         /// </summary>
-        /// <param name="input">
-        ///     The input stream.
-        /// </param>
-        /// <param name="output">
-        ///     The output stream.
+        /// <param name="serverLauncher">
+        ///     The <see cref="InProcessServerLauncher"/> used to wire up the client and server streams.
         /// </param>
         /// <returns>
         ///     A <see cref="Task"/> representing the operation.
         /// </returns>
-        static async Task RunLanguageClient(Stream input, Stream output)
+        static async Task RunLanguageClient(InProcessServerLauncher serverLauncher)
         {
-            if (input == null)
-                throw new ArgumentNullException(nameof(input));
-
-            if (output == null)
-                throw new ArgumentNullException(nameof(output));
-
+            if (serverLauncher == null)
+                throw new ArgumentNullException(nameof(serverLauncher));
+            
             Log.Information("Starting client...");
-            ClientConnection connection = new ClientConnection(new ClientDispatcher(), input, output);
-            LanguageClient client = new LanguageClient(connection)
+            LanguageClient client = new LanguageClient(serverLauncher)
             {
                 ClientCapabilities =
                 {

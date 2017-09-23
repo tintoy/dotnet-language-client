@@ -12,6 +12,7 @@ namespace LSP.Client
     using Clients;
     using Dispatcher;
     using Handlers;
+    using Launcher;
     using Protocol;
 
     /// <summary>
@@ -34,14 +35,9 @@ namespace LSP.Client
         readonly DynamicRegistrationHandler _dynamicRegistrationHandler = new DynamicRegistrationHandler();
 
         /// <summary>
-        ///     <see cref="ProcessStartInfo"/> describing the server process.
+        ///     Launcher for the server process.
         /// </summary>
-        readonly ProcessStartInfo _serverStartInfo;
-
-        /// <summary>
-        ///     The server process.
-        /// </summary>
-        Process _serverProcess;
+        ServerLauncher _serverLauncher;
 
         /// <summary>
         ///     The connection to the language server.
@@ -54,38 +50,30 @@ namespace LSP.Client
         TaskCompletionSource<object> _readyCompletion = new TaskCompletionSource<object>();
 
         /// <summary>
-        ///     The completion source used to wait for server exit.
-        /// </summary>
-        TaskCompletionSource<object> _serverExitCompletion;
-
-        /// <summary>
         ///     Create a new <see cref="LanguageClient"/>.
         /// </summary>
         /// <param name="serverStartInfo">
         ///     <see cref="ProcessStartInfo"/> used to start the server process.
         /// </param>
         public LanguageClient(ProcessStartInfo serverStartInfo)
-            : this()
+            : this(new ExternalProcessServerLauncher(serverStartInfo))
         {
-            if (serverStartInfo == null)
-                throw new ArgumentNullException(nameof(serverStartInfo));
-
-            _serverStartInfo = serverStartInfo;
         }
 
         /// <summary>
         ///     Create a new <see cref="LanguageClient"/>.
         /// </summary>
-        /// <param name="connection">
-        ///     The <see cref="ClientConnection"/> to use.
+        /// <param name="serverLauncher">
+        ///     <see cref="ServerLauncher"/> used to start or connect to the server process.
         /// </param>
-        public LanguageClient(ClientConnection connection)
+        public LanguageClient(ServerLauncher serverLauncher)
             : this()
         {
-            if (connection == null)
-                throw new ArgumentNullException(nameof(connection));
+            if (serverLauncher == null)
+                throw new ArgumentNullException(nameof(serverLauncher));
 
-            _connection = connection;
+            _serverLauncher = serverLauncher;
+            _serverLauncher.Exited += ServerProcess_Exit;
         }
 
         /// <summary>
@@ -105,16 +93,11 @@ namespace LSP.Client
         /// </summary>
         public void Dispose()
         {
-            _connection?.Dispose();
+            ClientConnection connection = Interlocked.Exchange(ref _connection, null);
+            connection?.Dispose();
 
-            if (_serverProcess != null)
-            {
-                if (!_serverProcess.HasExited)
-                    _serverProcess.Kill();
-
-                _serverProcess.Dispose();
-                _serverProcess = null;
-            }
+            ServerLauncher serverLauncher = Interlocked.Exchange(ref _serverLauncher, null);
+            serverLauncher?.Dispose();
         }
 
         /// <summary>
@@ -200,7 +183,7 @@ namespace LSP.Client
             {
                 return Task.WhenAll(
                     _connection.HasClosed,
-                    _serverExitCompletion?.Task ?? Task.CompletedTask
+                    _serverLauncher?.HasExited ?? Task.CompletedTask
                 );
             }
         }
@@ -227,7 +210,7 @@ namespace LSP.Client
             if (IsInitialized)
                 throw new InvalidOperationException("Client has already been initialised.");
 
-            Start();
+            await Start();
 
             InitializeParams initializeParams = new InitializeParams
             {
@@ -264,7 +247,7 @@ namespace LSP.Client
         /// </returns>
         public async Task Shutdown()
         {
-            ClientConnection connection = Interlocked.Exchange(ref _connection, null);
+            ClientConnection connection = _connection;
             if (connection != null)
             {
                 if (connection.IsOpen)
@@ -277,14 +260,11 @@ namespace LSP.Client
                 await connection.HasClosed;
             }
 
-            if (_serverProcess != null)
+            ServerLauncher serverLauncher = _serverLauncher;
+            if (serverLauncher != null)
             {
-                if (!_serverProcess.HasExited)
-                    _serverProcess.Kill();
-
-                await _serverExitCompletion.Task;
-
-                _serverProcess = null;
+                if (serverLauncher.IsRunning)
+                    await serverLauncher.Stop();
             }
 
             IsInitialized = false;
@@ -389,38 +369,27 @@ namespace LSP.Client
         /// <summary>
         ///     Start the language server.
         /// </summary>
-        void Start()
+        /// <returns>
+        ///     A <see cref="Task"/> representing the operation.
+        /// </returns>
+        async Task Start()
         {
-            _serverExitCompletion = new TaskCompletionSource<object>();
-
-            if (_serverStartInfo != null)
+            if (_serverLauncher == null)
+                throw new ObjectDisposedException(GetType().Name);
+            
+            if (!_serverLauncher.IsRunning)
             {
                 Log.Verbose("Starting language server...");
 
-                _serverStartInfo.CreateNoWindow = true;
-                _serverStartInfo.UseShellExecute = false;
-                _serverStartInfo.RedirectStandardInput = true;
-                _serverStartInfo.RedirectStandardOutput = true;
-
-                _serverProcess = new Process
-                {
-                    StartInfo = _serverStartInfo,
-                    EnableRaisingEvents = true
-                };
-                _serverProcess.Exited += ServerProcess_Exit;
-
-                if (!_serverProcess.Start())
-                    throw new InvalidOperationException("Failed to launch language server .");
+                await _serverLauncher.Start();
 
                 Log.Verbose("Language server is running.");
             }
-            else
-                _serverExitCompletion.SetResult(null); // Treat server as if it has already exited.
 
             Log.Verbose("Opening connection to language server...");
 
             if (_connection == null)
-                _connection = new ClientConnection(_dispatcher, _serverProcess);
+                _connection = new ClientConnection(_dispatcher, input: _serverLauncher.OutputStream, output: _serverLauncher.InputStream);
 
             _connection.Open();
 
@@ -439,8 +408,6 @@ namespace LSP.Client
         async void ServerProcess_Exit(object sender, EventArgs args)
         {
             Log.Verbose("Server process has exited; language client is shutting down...");
-
-            _serverExitCompletion?.TrySetResult(null);
 
             ClientConnection connection = Interlocked.Exchange(ref _connection, null);
             if (connection != null)

@@ -1,5 +1,4 @@
-﻿using JsonRpc.Server;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Serilog;
 using System;
@@ -22,6 +21,11 @@ namespace LSP.Client.Protocol
     public sealed class ClientConnection
         : IDisposable
     {
+        /// <summary>
+        ///     The buffer size to use when receiving headers.
+        /// </summary>
+        const short HeaderBufferSize = 300;
+
         /// <summary>
         ///     Minimum size of the buffer for receiving headers ("Content-Length: 1\r\n\r\n").
         /// </summary>
@@ -111,20 +115,6 @@ namespace LSP.Client.Protocol
         ///     A <see cref="Task"/> representing the connection's dispatch loop.
         /// </summary>
         Task _dispatchLoop;
-
-        /// <summary>
-        ///     Create a new <see cref="ClientConnection"/>.
-        /// </summary>
-        /// <param name="dispatcher">
-        ///     The <see cref="ClientDispatcher"/> used to dispatch messages to handlers.
-        /// </param>
-        /// <param name="serverProcess">
-        ///     A <see cref="Process"/> representing the language server.
-        /// </param>
-        public ClientConnection(ClientDispatcher dispatcher, Process serverProcess)
-            : this(dispatcher, input: serverProcess.StandardOutput.BaseStream, output: serverProcess.StandardInput.BaseStream)
-        {
-        }
 
         /// <summary>
         ///     Create a new <see cref="ClientConnection"/>.
@@ -616,7 +606,7 @@ namespace LSP.Client.Protocol
         {
             Log.Verbose("Reading response headers...");
 
-            byte[] buffer = new byte[300];
+            byte[] buffer = new byte[HeaderBufferSize];
             int bytesRead = await _input.ReadAsync(buffer, 0, MinimumHeaderLength, _cancellation);
 
             Log.Verbose("Read {ByteCount} bytes from input stream.", bytesRead);
@@ -706,7 +696,7 @@ namespace LSP.Client.Protocol
             if (rawHeaders == null)
                 throw new ArgumentNullException(nameof(rawHeaders));
 
-            Dictionary<string, string> headers = new Dictionary<string, string>();
+            Dictionary<string, string> headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); // Header names are case-insensitive.
             string[] rawHeaderEntries = rawHeaders.Split(new string[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
             foreach (string rawHeaderEntry in rawHeaderEntries)
             {
