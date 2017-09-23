@@ -1,4 +1,6 @@
-﻿namespace LSP.Client.Handlers
+﻿using System.Threading.Tasks;
+
+namespace LSP.Client.Handlers
 {
     /// <summary>
     ///     Represents a handler for empty notifications.
@@ -9,6 +11,9 @@
         /// <summary>
         ///     Invoke the handler.
         /// </summary>
-        void Invoke();
+        /// <returns>
+        ///     A <see cref="Task"/> representing the operation.
+        /// </returns>
+        Task Invoke();
     }
 }

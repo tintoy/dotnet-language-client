@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 namespace LSP.Client.Handlers
 {
     /// <summary>
-    ///     A delegate-based handler for requests.
+    ///     A delegate-based handler for requests whose responses have payloads.
     /// </summary>
     /// <typeparam name="TRequest">
     ///     The request message type.
@@ -14,11 +14,11 @@ namespace LSP.Client.Handlers
     /// <typeparam name="TResponse">
     ///     The response message type.
     /// </typeparam>
-    public class DelegateRequestHandler<TRequest, TResponse>
+    public class DelegateRequestResponseHandler<TRequest, TResponse>
         : DelegateHandler, IInvokeRequestHandler
     {
         /// <summary>
-        ///     Create a new <see cref="DelegateRequestHandler{TRequest, TResponse}"/>.
+        ///     Create a new <see cref="DelegateRequestResponseHandler{TRequest, TResponse}"/>.
         /// </summary>
         /// <param name="method">
         ///     The name of the method handled by the handler.
@@ -26,7 +26,7 @@ namespace LSP.Client.Handlers
         /// <param name="handler">
         ///     The <see cref="RequestHandler{TRequest, TResponse}"/> delegate that implements the handler.
         /// </param>
-        public DelegateRequestHandler(string method, RequestHandler<TRequest, TResponse> handler)
+        public DelegateRequestResponseHandler(string method, RequestHandler<TRequest, TResponse> handler)
             : base(method)
         {
             if (handler == null)

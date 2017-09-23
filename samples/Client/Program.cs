@@ -87,7 +87,7 @@ namespace Client
                 // Listen for log messages from the language server.
                 client.Window.OnLogMessage((message, messageType) =>
                 {
-                    Log.Information("Language server says: [{MessageType}] {Message}", messageType, message);
+                    Log.Information("Language server says: [{MessageType:l}] {Message}", messageType, message);
                 });
 
                 // Listen for our custom notification from the language server.

@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json.Linq;
+using System.Threading.Tasks;
 
 namespace LSP.Client.Handlers
 {
@@ -14,6 +15,9 @@ namespace LSP.Client.Handlers
         /// <param name="notification">
         ///     The notification message.
         /// </param>
-        void Invoke(JObject notification);
+        /// <returns>
+        ///     A <see cref="Task"/> representing the operation.
+        /// </returns>
+        Task Invoke(JObject notification);
     }
 }

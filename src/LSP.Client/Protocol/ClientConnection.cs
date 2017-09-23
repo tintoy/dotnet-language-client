@@ -869,26 +869,34 @@ namespace LSP.Client.Protocol
 
             Log.Verbose("Dispatching incoming {NotificationMethod} notification...", notificationMessage.Method);
 
-            bool handled;
-
-            try
-            {
-                if (notificationMessage.Params != null)
-                    handled = _dispatcher.TryHandleNotification(notificationMessage.Method, notificationMessage.Params);
-                else
-                    handled = _dispatcher.TryHandleEmptyNotification(notificationMessage.Method);
-            }
-            catch (Exception handlerError)
-            {
-                Log.Error(handlerError, "Unable to dispatch incoming {NotificationMethod} notification (unexpected error raised by handler).", notificationMessage.Method);
-
-                return;
-            }
-
-            if (handled)
-                Log.Verbose("Dispatched incoming {NotificationMethod} notification.", notificationMessage.Method);
+            Task<bool> handlerTask;
+            if (notificationMessage.Params != null)
+                handlerTask = _dispatcher.TryHandleNotification(notificationMessage.Method, notificationMessage.Params);
             else
-                Log.Verbose("Ignored incoming {NotificationMethod} notification (no handler registered).", notificationMessage.Method);
+                handlerTask = _dispatcher.TryHandleEmptyNotification(notificationMessage.Method);
+
+#pragma warning disable CS4014 // Continuation does the work we need; no need to await it as this would tie up the dispatch loop.
+            handlerTask.ContinueWith(completedHandler =>
+            {
+                if (handlerTask.IsCanceled)
+                    Log.Verbose("{NotificationMethod} notification canceled.", notificationMessage.Method);
+                else if (handlerTask.IsFaulted)
+                {
+                    Exception handlerError = handlerTask.Exception.Flatten().InnerExceptions[0];
+
+                    Log.Error(handlerError, "Failed to dispatch {NotificationMethod} notification (unexpected error raised by handler).", notificationMessage.Method);
+                }
+                else if (handlerTask.IsCompleted)
+                {
+                    Log.Verbose("{NotificationMethod} notification complete.", notificationMessage.Method);
+
+                    if (completedHandler.Result)
+                        Log.Verbose("Dispatched incoming {NotificationMethod} notification.", notificationMessage.Method);
+                    else
+                        Log.Verbose("Ignored incoming {NotificationMethod} notification (no handler registered).", notificationMessage.Method);
+                }
+            });
+#pragma warning restore CS4014 // Continuation does the work we need; no need to await it as this would tie up the dispatch loop.
         }
 
         /// <summary>

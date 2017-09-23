@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 namespace LSP.Client.Handlers
 {
     /// <summary>
-    ///     A delegate-based handler for requests.
+    ///     A delegate-based handler for requests whose responses have no payload (i.e. void return type).
     /// </summary>
     /// <typeparam name="TRequest">
     ///     The request message type.

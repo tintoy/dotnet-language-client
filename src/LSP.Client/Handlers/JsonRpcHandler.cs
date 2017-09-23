@@ -3,18 +3,18 @@
 namespace LSP.Client.Handlers
 {
     /// <summary>
-    ///     The base class for delegate-based message handlers.
+    ///     The base class for message handlers based on JSON-RPC <see cref="JsonRpc.IJsonRpcHandler"/>s.
     /// </summary>
-    public abstract class DelegateHandler
+    public abstract class JsonRpcHandler
         : IHandler
     {
         /// <summary>
-        ///     Create a new <see cref="DelegateHandler"/>.
+        ///     Create a new <see cref="JsonRpcHandler"/>.
         /// </summary>
         /// <param name="method">
         ///     The name of the method handled by the handler.
         /// </param>
-        protected DelegateHandler(string method)
+        protected JsonRpcHandler(string method)
         {
             if (String.IsNullOrWhiteSpace(method))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(method)}.", nameof(method));

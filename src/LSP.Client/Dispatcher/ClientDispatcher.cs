@@ -59,14 +59,14 @@ namespace LSP.Client.Dispatcher
         /// <returns>
         ///     <c>true</c>, if an empty notification handler was registered for specified method; otherwise, <c>false</c>.
         /// </returns>
-        public bool TryHandleEmptyNotification(string method)
+        public async Task<bool> TryHandleEmptyNotification(string method)
         {
             if (String.IsNullOrWhiteSpace(method))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(method)}.", nameof(method));
 
             if (_handlers.TryGetValue(method, out IHandler handler) && handler is IInvokeEmptyNotificationHandler emptyNotificationHandler)
             {
-                emptyNotificationHandler.Invoke();
+                await emptyNotificationHandler.Invoke();
 
                 return true;
             }
@@ -86,14 +86,14 @@ namespace LSP.Client.Dispatcher
         /// <returns>
         ///     <c>true</c>, if a notification handler was registered for specified method; otherwise, <c>false</c>.
         /// </returns>
-        public bool TryHandleNotification(string method, JObject notification)
+        public async Task<bool> TryHandleNotification(string method, JObject notification)
         {
             if (String.IsNullOrWhiteSpace(method))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(method)}.", nameof(method));
 
             if (_handlers.TryGetValue(method, out IHandler handler) && handler is IInvokeNotificationHandler notificationHandler)
             {
-                notificationHandler.Invoke(notification);
+                await notificationHandler.Invoke(notification);
 
                 return true;
             }

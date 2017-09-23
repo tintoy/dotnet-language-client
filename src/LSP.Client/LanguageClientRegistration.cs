@@ -24,7 +24,7 @@ namespace LSP.Client
         /// <returns>
         ///     An <see cref="IDisposable"/> representing the registration.
         /// </returns>
-        public static IDisposable HandleNotification(this LanguageClient languageClient, string method, EmptyNotificationHandler handler)
+        public static IDisposable HandleEmptyNotification(this LanguageClient languageClient, string method, EmptyNotificationHandler handler)
         {
             if (languageClient == null)
                 throw new ArgumentNullException(nameof(languageClient));
@@ -39,6 +39,38 @@ namespace LSP.Client
                 new DelegateEmptyNotificationHandler(method, handler)
             );
         }
+
+        /// <summary>
+        ///     Register a handler for empty notifications.
+        /// </summary>
+        /// <param name="languageClient">
+        ///     The <see cref="LanguageClient"/>.
+        /// </param>
+        /// <param name="method">
+        ///     The name of the notification method to handle.
+        /// </param>
+        /// <param name="handler">
+        ///     A JSON-RPC <see cref="JsonRpc.INotificationHandler"/> that implements the handler.
+        /// </param>
+        /// <returns>
+        ///     An <see cref="IDisposable"/> representing the registration.
+        /// </returns>
+        public static IDisposable HandleEmptyNotification(this LanguageClient languageClient, string method, JsonRpc.INotificationHandler handler)
+        {
+            if (languageClient == null)
+                throw new ArgumentNullException(nameof(languageClient));
+
+            if (String.IsNullOrWhiteSpace(method))
+                throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(method)}.", nameof(method));
+
+            if (handler == null)
+                throw new ArgumentNullException(nameof(handler));
+
+            return languageClient.RegisterHandler(
+                new JsonRpcEmptyNotificationHandler(method, handler)
+            );
+        }
+
 
         /// <summary>
         ///     Register a handler for notifications.
@@ -71,6 +103,40 @@ namespace LSP.Client
 
             return languageClient.RegisterHandler(
                 new DelegateNotificationHandler<TNotification>(method, handler)
+            );
+        }
+
+        /// <summary>
+        ///     Register a handler for notifications.
+        /// </summary>
+        /// <typeparam name="TNotification">
+        ///     The notification message type.
+        /// </typeparam>
+        /// <param name="languageClient">
+        ///     The <see cref="LanguageClient"/>.
+        /// </param>
+        /// <param name="method">
+        ///     The name of the notification method to handle.
+        /// </param>
+        /// <param name="handler">
+        ///     A JSON-RPC <see cref="JsonRpc.INotificationHandler{TNotification}"/> that implements the handler.
+        /// </param>
+        /// <returns>
+        ///     An <see cref="IDisposable"/> representing the registration.
+        /// </returns>
+        public static IDisposable HandleNotification<TNotification>(this LanguageClient languageClient, string method, JsonRpc.INotificationHandler<TNotification> handler)
+        {
+            if (languageClient == null)
+                throw new ArgumentNullException(nameof(languageClient));
+
+            if (String.IsNullOrWhiteSpace(method))
+                throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(method)}.", nameof(method));
+
+            if (handler == null)
+                throw new ArgumentNullException(nameof(handler));
+
+            return languageClient.RegisterHandler(
+                new JsonRpcNotificationHandler<TNotification>(method, handler)
             );
         }
 
@@ -141,7 +207,7 @@ namespace LSP.Client
                 throw new ArgumentNullException(nameof(handler));
 
             return languageClient.RegisterHandler(
-                new DelegateRequestHandler<TRequest, TResponse>(method, handler)
+                new DelegateRequestResponseHandler<TRequest, TResponse>(method, handler)
             );
         }
     }

@@ -141,7 +141,7 @@ namespace LSP.Client.Protocol
                 throw new ArgumentNullException(nameof(handler));
 
             return clientConnection.RegisterHandler(
-                new DelegateRequestHandler<TRequest, TResponse>(method, handler)
+                new DelegateRequestResponseHandler<TRequest, TResponse>(method, handler)
             );
         }
     }

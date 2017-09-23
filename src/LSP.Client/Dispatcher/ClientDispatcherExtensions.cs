@@ -10,7 +10,7 @@ namespace LSP.Client.Dispatcher
     public static class ClientDispatcherExtensions
     {
         /// <summary>
-        ///     Register a delegate with the <see cref="ClientDispatcher"/> to handle the specified notification type.
+        ///     Register a delegate with the <see cref="ClientDispatcher"/> to handle the specified empty notification type.
         /// </summary>
         /// <param name="clientDispatcher">
         ///     The <see cref="ClientDispatcher"/>.
@@ -24,7 +24,7 @@ namespace LSP.Client.Dispatcher
         /// <returns>
         ///     An <see cref="IDisposable"/> representing the registration.
         /// </returns>
-        public static IDisposable RegisterNotificationHandler(this ClientDispatcher clientDispatcher, string method, EmptyNotificationHandler handler)
+        public static IDisposable RegisterEmptyNotificationHandler(this ClientDispatcher clientDispatcher, string method, EmptyNotificationHandler handler)
         {
             if (clientDispatcher == null)
                 throw new ArgumentNullException(nameof(clientDispatcher));
@@ -55,7 +55,7 @@ namespace LSP.Client.Dispatcher
         /// <returns>
         ///     An <see cref="IDisposable"/> representing the registration.
         /// </returns>
-        public static IDisposable AddNotificationHandler<TNotification>(this ClientDispatcher clientDispatcher, string method, NotificationHandler<TNotification> handler)
+        public static IDisposable RegisterNotificationHandler<TNotification>(this ClientDispatcher clientDispatcher, string method, NotificationHandler<TNotification> handler)
         {
             if (clientDispatcher == null)
                 throw new ArgumentNullException(nameof(clientDispatcher));
@@ -86,7 +86,7 @@ namespace LSP.Client.Dispatcher
         /// <returns>
         ///     An <see cref="IDisposable"/> representing the registration.
         /// </returns>
-        public static IDisposable AddRequestHandler<TRequest>(this ClientDispatcher clientDispatcher, string method, RequestHandler<TRequest> handler)
+        public static IDisposable RegisterNotificationHandler<TRequest>(this ClientDispatcher clientDispatcher, string method, RequestHandler<TRequest> handler)
         {
             if (clientDispatcher == null)
                 throw new ArgumentNullException(nameof(clientDispatcher));
@@ -117,7 +117,7 @@ namespace LSP.Client.Dispatcher
         /// <returns>
         ///     An <see cref="IDisposable"/> representing the registration.
         /// </returns>
-        public static IDisposable AddRequestHandler<TRequest, TResponse>(this ClientDispatcher clientDispatcher, string method, RequestHandler<TRequest, TResponse> handler)
+        public static IDisposable RegisterNotificationHandler<TRequest, TResponse>(this ClientDispatcher clientDispatcher, string method, RequestHandler<TRequest, TResponse> handler)
         {
             if (clientDispatcher == null)
                 throw new ArgumentNullException(nameof(clientDispatcher));
@@ -129,7 +129,66 @@ namespace LSP.Client.Dispatcher
                 throw new ArgumentNullException(nameof(handler));
 
             return clientDispatcher.RegisterHandler(
-                new DelegateRequestHandler<TRequest, TResponse>(method, handler)
+                new DelegateRequestResponseHandler<TRequest, TResponse>(method, handler)
+            );
+        }
+
+        /// <summary>
+        ///     Register a JSON-RPC handler for an empty notification.
+        /// </summary>
+        /// <param name="clientDispatcher">
+        ///     The <see cref="ClientDispatcher"/>.
+        /// </param>
+        /// <param name="method">
+        ///     The name of the notification method to handle.
+        /// </param>
+        /// <param name="handler">
+        ///     The JSON-RPC <see cref="JsonRpc.INotificationHandler"/>.
+        /// </param>
+        /// <returns>
+        ///     An <see cref="IDisposable"/> representing the registration.
+        /// </returns>
+        public static IDisposable RegisterEmptyNotificationHandler(this ClientDispatcher clientDispatcher, string method, JsonRpc.INotificationHandler handler)
+        {
+            if (clientDispatcher == null)
+                throw new ArgumentNullException(nameof(clientDispatcher));
+
+            if (handler == null)
+                throw new ArgumentNullException(nameof(handler));
+
+            return clientDispatcher.RegisterHandler(
+                new JsonRpcEmptyNotificationHandler(method, handler)
+            );
+        }
+
+        /// <summary>
+        ///     Register a JSON-RPC handler for a notification.
+        /// </summary>
+        /// <typeparam name="TNotification">
+        ///     The notification message type.s
+        /// </typeparam>
+        /// <param name="clientDispatcher">
+        ///     The <see cref="ClientDispatcher"/>.
+        /// </param>
+        /// <param name="method">
+        ///     The name of the notification method to handle.
+        /// </param>
+        /// <param name="handler">
+        ///     The JSON-RPC <see cref="JsonRpc.INotificationHandler{TNotification}"/>.
+        /// </param>
+        /// <returns>
+        ///     An <see cref="IDisposable"/> representing the registration.
+        /// </returns>
+        public static IDisposable RegisterNotificationHandler<TNotification>(this ClientDispatcher clientDispatcher, string method, JsonRpc.INotificationHandler<TNotification> handler)
+        {
+            if (clientDispatcher == null)
+                throw new ArgumentNullException(nameof(clientDispatcher));
+
+            if (handler == null)
+                throw new ArgumentNullException(nameof(handler));
+
+            return clientDispatcher.RegisterHandler(
+                new JsonRpcNotificationHandler<TNotification>(method, handler)
             );
         }
     }

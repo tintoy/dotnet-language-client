@@ -1,24 +1,25 @@
-﻿using System;
+﻿using JsonRpc;
+using System;
 using System.Threading.Tasks;
 
 namespace LSP.Client.Handlers
 {
     /// <summary>
-    ///     A delegate-based handler for empty notifications.
+    ///     An empty notification handler that invokes a JSON-RPC <see cref="INotificationHandler"/>.
     /// </summary>
-    public class DelegateEmptyNotificationHandler
-        : DelegateHandler, IInvokeEmptyNotificationHandler
+    public class JsonRpcEmptyNotificationHandler
+        : JsonRpcHandler, IInvokeEmptyNotificationHandler
     {
         /// <summary>
-        ///     Create a new <see cref="DelegateEmptyNotificationHandler"/>.
+        ///     Create a new <see cref="JsonRpcEmptyNotificationHandler"/>.
         /// </summary>
         /// <param name="method">
         ///     The name of the method handled by the handler.
         /// </param>
         /// <param name="handler">
-        ///     The <see cref="EmptyNotificationHandler"/> delegate that implements the handler.
+        ///     The underlying JSON-RPC <see cref="INotificationHandler"/>.
         /// </param>
-        public DelegateEmptyNotificationHandler(string method, EmptyNotificationHandler handler)
+        public JsonRpcEmptyNotificationHandler(string method, INotificationHandler handler)
             : base(method)
         {
             if (handler == null)
@@ -28,9 +29,9 @@ namespace LSP.Client.Handlers
         }
 
         /// <summary>
-        ///     The <see cref="EmptyNotificationHandler"/> delegate that implements the handler.
+        ///     The underlying JSON-RPC <see cref="INotificationHandler"/>.
         /// </summary>
-        public EmptyNotificationHandler Handler { get; }
+        public INotificationHandler Handler { get; }
 
         /// <summary>
         ///     The kind of handler.
@@ -43,11 +44,6 @@ namespace LSP.Client.Handlers
         /// <returns>
         ///     A <see cref="Task"/> representing the operation.
         /// </returns>
-        public async Task Invoke()
-        {
-            await Task.Yield();
-
-            Handler();
-        }
+        public Task Invoke() => Handler.Handle();
     }
 }
