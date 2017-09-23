@@ -23,7 +23,7 @@ namespace LSP.Client.Protocol
         : IDisposable
     {
         /// <summary>
-        ///     Minimum size of the buffer for receiving headers ("Content-Length: X\r\n\r\n").
+        ///     Minimum size of the buffer for receiving headers ("Content-Length: 1\r\n\r\n").
         /// </summary>
         const short MinimumHeaderLength = 21;
 
@@ -256,12 +256,12 @@ namespace LSP.Client.Protocol
         }
 
         /// <summary>
-        ///     Send a notification to the language server.
+        ///     Send an empty notification to the language server.
         /// </summary>
         /// <param name="method">
         ///     The notification method name.
         /// </param>
-        public void SendNotification(string method)
+        public void SendEmptyNotification(string method)
         {
             if (String.IsNullOrWhiteSpace(method))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(method)}.", nameof(method));
@@ -272,8 +272,7 @@ namespace LSP.Client.Protocol
             _outgoing.TryAdd(new ClientMessage
             {
                 // No Id means it's a notification.
-                Method = method,
-                Params = new JObject()
+                Method = method
             });
         }
 
@@ -301,7 +300,7 @@ namespace LSP.Client.Protocol
             {
                 // No Id means it's a notification.
                 Method = method,
-                Params = notification != null ? JObject.FromObject(notification) : null
+                Params = JObject.FromObject(notification)
             });
         }
 

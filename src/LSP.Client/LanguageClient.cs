@@ -27,7 +27,12 @@ namespace LSP.Client
         ///     The dispatcher for incoming requests, notifications, and responses.
         /// </summary>
         readonly ClientDispatcher _dispatcher = new ClientDispatcher();
-        
+
+        /// <summary>
+        ///     The handler for dynamic registration of client
+        /// </summary>
+        readonly DynamicRegistrationHandler _dynamicRegistrationHandler = new DynamicRegistrationHandler();
+
         /// <summary>
         ///     <see cref="ProcessStartInfo"/> describing the server process.
         /// </summary>
@@ -60,14 +65,39 @@ namespace LSP.Client
         ///     <see cref="ProcessStartInfo"/> used to start the server process.
         /// </param>
         public LanguageClient(ProcessStartInfo serverStartInfo)
+            : this()
         {
             if (serverStartInfo == null)
                 throw new ArgumentNullException(nameof(serverStartInfo));
 
             _serverStartInfo = serverStartInfo;
+        }
+
+        /// <summary>
+        ///     Create a new <see cref="LanguageClient"/>.
+        /// </summary>
+        /// <param name="connection">
+        ///     The <see cref="ClientConnection"/> to use.
+        /// </param>
+        public LanguageClient(ClientConnection connection)
+            : this()
+        {
+            if (connection == null)
+                throw new ArgumentNullException(nameof(connection));
+
+            _connection = connection;
+        }
+
+        /// <summary>
+        ///     Create a new <see cref="LanguageClient"/>.
+        /// </summary>
+        LanguageClient()
+        {
             Workspace = new WorkspaceClient(this);
             Window = new WindowClient(this);
             TextDocument = new TextDocumentClient(this);
+
+            _dispatcher.RegisterHandler(_dynamicRegistrationHandler);
         }
 
         /// <summary>
@@ -144,7 +174,7 @@ namespace LSP.Client
         /// <summary>
         ///     The server's capabilities.
         /// </summary>
-        public ServerCapabilities ServerCapabilities { get; private set; }
+        public ServerCapabilities ServerCapabilities => _dynamicRegistrationHandler.ServerCapabilities;
 
         /// <summary>
         ///     Has the language client been initialised?
@@ -209,14 +239,23 @@ namespace LSP.Client
             Log.Verbose("Sending 'initialize' message to language server...");
 
             InitializeResult result = await SendRequest<InitializeResult>("initialize", initializeParams, cancellationToken).ConfigureAwait(false);
-            ServerCapabilities = result.Capabilities;
+            if (result == null)
+                throw new LspException("Server replied to 'initialize' request with a null response.");
+
+            _dynamicRegistrationHandler.ServerCapabilities = result.Capabilities;
 
             Log.Verbose("Sent 'initialize' message to language server.");
+
+            Log.Verbose("Sending 'initialized' notification to language server...");
+
+            SendEmptyNotification("initialized");
+
+            Log.Verbose("Sent 'initialized' notification to language server.");
 
             IsInitialized = true;
             _readyCompletion.SetResult(null);
         }
-        
+
         /// <summary>
         ///     Stop the language server.
         /// </summary>
@@ -230,8 +269,8 @@ namespace LSP.Client
             {
                 if (connection.IsOpen)
                 {
-                    connection.SendNotification("shutdown");
-                    connection.SendNotification("exit");
+                    connection.SendEmptyNotification("shutdown");
+                    connection.SendEmptyNotification("exit");
                     connection.Close(flushOutgoing: true);
                 }
 
@@ -264,18 +303,18 @@ namespace LSP.Client
         public IDisposable RegisterHandler(IHandler handler) => _dispatcher.RegisterHandler(handler);
 
         /// <summary>
-        ///     Send a notification to the language server.
+        ///     Send an empty notification to the language server.
         /// </summary>
         /// <param name="method">
         ///     The notification method name.
         /// </param>
-        public void SendNotification(string method)
+        public void SendEmptyNotification(string method)
         {
             ClientConnection connection = _connection;
             if (connection == null || !connection.IsOpen)
                 throw new InvalidOperationException("Not connected to the language server.");
 
-            connection.SendNotification(method);
+            connection.SendEmptyNotification(method);
         }
 
         /// <summary>
@@ -352,30 +391,37 @@ namespace LSP.Client
         /// </summary>
         void Start()
         {
-            Log.Verbose("Starting language server...");
-
-            _serverStartInfo.CreateNoWindow = true;
-            _serverStartInfo.UseShellExecute = false;
-            _serverStartInfo.RedirectStandardInput = true;
-            _serverStartInfo.RedirectStandardOutput = true;
-
             _serverExitCompletion = new TaskCompletionSource<object>();
 
-            _serverProcess = new Process
+            if (_serverStartInfo != null)
             {
-                StartInfo = _serverStartInfo,
-                EnableRaisingEvents = true
-            };
-            _serverProcess.Exited += ServerProcess_Exit;
+                Log.Verbose("Starting language server...");
 
-            if (!_serverProcess.Start())
-                throw new InvalidOperationException("Failed to launch language server .");
+                _serverStartInfo.CreateNoWindow = true;
+                _serverStartInfo.UseShellExecute = false;
+                _serverStartInfo.RedirectStandardInput = true;
+                _serverStartInfo.RedirectStandardOutput = true;
 
-            Log.Verbose("Language server is running.");
+                _serverProcess = new Process
+                {
+                    StartInfo = _serverStartInfo,
+                    EnableRaisingEvents = true
+                };
+                _serverProcess.Exited += ServerProcess_Exit;
+
+                if (!_serverProcess.Start())
+                    throw new InvalidOperationException("Failed to launch language server .");
+
+                Log.Verbose("Language server is running.");
+            }
+            else
+                _serverExitCompletion.SetResult(null); // Treat server as if it has already exited.
 
             Log.Verbose("Opening connection to language server...");
 
-            _connection = new ClientConnection(_dispatcher, _serverProcess);
+            if (_connection == null)
+                _connection = new ClientConnection(_dispatcher, _serverProcess);
+
             _connection.Open();
 
             Log.Verbose("Connection to language server is open.");
