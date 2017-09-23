@@ -3,6 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 15.0.26730.16
 MinimumVisualStudioVersion = 15.0.26124.0
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{5A024705-451F-4FEC-806A-A2B57C244642}"
+	ProjectSection(SolutionItems) = preProject
+		src\Common.props = src\Common.props
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LSP.Client", "src\LSP.Client\LSP.Client.csproj", "{565262C2-C4BA-4F84-AEFD-640957242DB7}"
 EndProject
@@ -17,6 +20,13 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VisualStudioExtension", "samples\VisualStudioExtension\VisualStudioExtension.csproj", "{90E17BBD-AC7B-4D1C-95FE-CB5176737CED}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SingleProcess", "samples\SingleProcess\SingleProcess.csproj", "{72D7132D-ADEB-42D6-B0BD-3024024CA09C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{A9296183-E831-4AFE-8968-E107C83B5B98}"
+	ProjectSection(SolutionItems) = preProject
+		test\TestCommon.props = test\TestCommon.props
+	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LSP.Client.Tests", "test\LSP.Client.Tests\LSP.Client.Tests.csproj", "{7974A542-684C-438C-A932-8F642CA91CC9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -100,6 +110,18 @@ Global
 		{72D7132D-ADEB-42D6-B0BD-3024024CA09C}.Release|x64.Build.0 = Release|Any CPU
 		{72D7132D-ADEB-42D6-B0BD-3024024CA09C}.Release|x86.ActiveCfg = Release|Any CPU
 		{72D7132D-ADEB-42D6-B0BD-3024024CA09C}.Release|x86.Build.0 = Release|Any CPU
+		{7974A542-684C-438C-A932-8F642CA91CC9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7974A542-684C-438C-A932-8F642CA91CC9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7974A542-684C-438C-A932-8F642CA91CC9}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7974A542-684C-438C-A932-8F642CA91CC9}.Debug|x64.Build.0 = Debug|Any CPU
+		{7974A542-684C-438C-A932-8F642CA91CC9}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7974A542-684C-438C-A932-8F642CA91CC9}.Debug|x86.Build.0 = Debug|Any CPU
+		{7974A542-684C-438C-A932-8F642CA91CC9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7974A542-684C-438C-A932-8F642CA91CC9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7974A542-684C-438C-A932-8F642CA91CC9}.Release|x64.ActiveCfg = Release|Any CPU
+		{7974A542-684C-438C-A932-8F642CA91CC9}.Release|x64.Build.0 = Release|Any CPU
+		{7974A542-684C-438C-A932-8F642CA91CC9}.Release|x86.ActiveCfg = Release|Any CPU
+		{7974A542-684C-438C-A932-8F642CA91CC9}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -111,6 +133,7 @@ Global
 		{9AA8E6F8-50F8-444A-8C74-FC94339509F6} = {916B0890-5C6C-4D47-8EF1-59754FE8A115}
 		{90E17BBD-AC7B-4D1C-95FE-CB5176737CED} = {916B0890-5C6C-4D47-8EF1-59754FE8A115}
 		{72D7132D-ADEB-42D6-B0BD-3024024CA09C} = {916B0890-5C6C-4D47-8EF1-59754FE8A115}
+		{7974A542-684C-438C-A932-8F642CA91CC9} = {A9296183-E831-4AFE-8968-E107C83B5B98}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DEB8EE47-A058-4C77-8B00-3A95EA7C3053}
