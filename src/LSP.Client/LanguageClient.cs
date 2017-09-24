@@ -31,22 +31,25 @@ namespace LSP.Client
         readonly ClientDispatcher _dispatcher = new ClientDispatcher();
 
         /// <summary>
-        ///     The handler for dynamic registration of client
+        ///     The handler for dynamic registration of server capabilities.
         /// </summary>
+        /// <remarks>
+        ///     We don't actually support this yet but some server implementations (e.g. OmniSharp) will freak out if we don't respond to the message, even if we've indicated that we don't support dynamic registrations of server capabilities.
+        /// </remarks>
         readonly DynamicRegistrationHandler _dynamicRegistrationHandler = new DynamicRegistrationHandler();
 
         /// <summary>
-        ///     The server process.
+        ///     The language server process.
         /// </summary>
         ServerProcess _process;
 
         /// <summary>
-        ///     The connection to the language server.
+        ///     The underlying LSP connection to the language server process.
         /// </summary>
         ClientConnection _connection;
 
         /// <summary>
-        ///     Completion source for language server readiness.
+        ///     Completion source that callers can await to determine when the language server is ready to use (i.e. initialised).
         /// </summary>
         TaskCompletionSource<object> _readyCompletion = new TaskCompletionSource<object>();
 
@@ -57,7 +60,7 @@ namespace LSP.Client
         ///     The logger to use.
         /// </param>
         /// <param name="serverStartInfo">
-        ///     <see cref="ProcessStartInfo"/> used to start the server process.
+        ///     A <see cref="ProcessStartInfo"/> describing how to start the server process.
         /// </param>
         public LanguageClient(ILogger logger, ProcessStartInfo serverStartInfo)
             : this(logger, new ExternalServerProcess(logger, serverStartInfo))
@@ -71,7 +74,7 @@ namespace LSP.Client
         ///     The application logger.
         /// </param>
         /// <param name="process">
-        ///     <see cref="ServerProcess"/> used to start or connect to the server process.
+        ///     A <see cref="ServerProcess"/> used to start or connect to the server process.
         /// </param>
         public LanguageClient(ILogger logger, ServerProcess process)
             : this(logger)
