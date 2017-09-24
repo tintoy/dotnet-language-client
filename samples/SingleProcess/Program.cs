@@ -64,7 +64,7 @@ namespace SingleProcess
         /// </returns>
         static async Task AsyncMain()
         {
-            using (PipeServerProcess serverProcess = new PipeServerProcess())
+            using (PipeServerProcess serverProcess = new PipeServerProcess(Log.Logger))
             {
                 await serverProcess.Start();
 

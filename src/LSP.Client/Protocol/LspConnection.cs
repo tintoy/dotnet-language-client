@@ -17,9 +17,9 @@ namespace LSP.Client.Protocol
     using Logging;
 
     /// <summary>
-    ///     A client-side LSP connection.
+    ///     An asynchronous connection using the LSP protocol over <see cref="Stream"/>s.
     /// </summary>
-    public sealed class ClientConnection
+    public sealed class LspConnection
         : IDisposable
     {
         /// <summary>
@@ -78,11 +78,6 @@ namespace LSP.Client.Protocol
         readonly Stream _output;
 
         /// <summary>
-        ///     The dispatcher for notifications and requests from the language server.
-        /// </summary>
-        readonly ClientDispatcher _dispatcher;
-
-        /// <summary>
         ///     The next available request Id.
         /// </summary>
         int _nextRequestId = 0;
@@ -103,6 +98,11 @@ namespace LSP.Client.Protocol
         Task _hasClosedTask = Task.CompletedTask;
 
         /// <summary>
+        ///     The <see cref="LspDispatcher"/> used to dispatch messages to handlers.
+        /// </summary>
+        public LspDispatcher _dispatcher;
+
+        /// <summary>
         ///     A <see cref="Task"/> representing the connection's receive loop.
         /// </summary>
         Task _sendLoop;
@@ -118,13 +118,10 @@ namespace LSP.Client.Protocol
         Task _dispatchLoop;
 
         /// <summary>
-        ///     Create a new <see cref="ClientConnection"/>.
+        ///     Create a new <see cref="LspConnection"/>.
         /// </summary>
         /// <param name="logger">
         ///     The logger to use.
-        /// </param>
-        /// <param name="dispatcher">
-        ///     The <see cref="ClientDispatcher"/> used to dispatch messages to handlers.
         /// </param>
         /// <param name="input">
         ///     The input stream.
@@ -132,13 +129,10 @@ namespace LSP.Client.Protocol
         /// <param name="output">
         ///     The output stream.
         /// </param>
-        public ClientConnection(ILogger logger, ClientDispatcher dispatcher, Stream input, Stream output)
+        public LspConnection(ILogger logger, Stream input, Stream output)
         {
             if (logger == null)
                 throw new ArgumentNullException(nameof(logger));
-
-            if (dispatcher == null)
-                throw new ArgumentNullException(nameof(dispatcher));
 
             if (input == null)
                 throw new ArgumentNullException(nameof(input));
@@ -152,8 +146,7 @@ namespace LSP.Client.Protocol
             if (!output.CanWrite)
                 throw new ArgumentException("Output stream does not support reading.", nameof(output));
 
-            Log = logger.ForSourceContext<ClientConnection>();
-            _dispatcher = dispatcher;
+            Log = logger.ForSourceContext<LspConnection>();
             _input = input;
             _output = output;
         }
@@ -192,15 +185,36 @@ namespace LSP.Client.Protocol
         /// <returns>
         ///     An <see cref="IDisposable"/> representing the registration.
         /// </returns>
-        public IDisposable RegisterHandler(IHandler handler) => _dispatcher.RegisterHandler(handler);
+        public IDisposable RegisterHandler(IHandler handler)
+        {
+            if (handler == null)
+                throw new ArgumentNullException(nameof(handler));
+
+            LspDispatcher dispatcher = _dispatcher;
+            if (dispatcher == null)
+                throw new InvalidOperationException("The connection has not been opened.");
+
+            return dispatcher.RegisterHandler(handler);
+        }
 
         /// <summary>
         ///     Open the connection.
         /// </summary>
-        public void Open()
+        /// <param name="dispatcher">
+        ///     The <see cref="LspDispatcher"/> used to dispatch messages to handlers.
+        /// </param>
+        public void Open(LspDispatcher dispatcher)
         {
+            if (dispatcher == null)
+                throw new ArgumentNullException(nameof(dispatcher));
+
+            if (IsOpen)
+                throw new InvalidOperationException("Connection is already open.");
+
             _cancellationSource = new CancellationTokenSource();
             _cancellation = _cancellationSource.Token;
+
+            _dispatcher = dispatcher;
             _sendLoop = SendLoop();
             _receiveLoop = ReceiveLoop();
             _dispatchLoop = DispatchLoop();
@@ -251,6 +265,7 @@ namespace LSP.Client.Protocol
             _sendLoop = null;
             _receiveLoop = null;
             _dispatchLoop = null;
+            _dispatcher = null;
         }
 
         /// <summary>

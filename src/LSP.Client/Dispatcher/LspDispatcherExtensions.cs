@@ -1,19 +1,19 @@
 ﻿using System;
 
-namespace LSP.Client.Protocol
+namespace LSP.Client.Dispatcher
 {
     using Handlers;
 
     /// <summary>
-    ///     Extension methods for <see cref="ClientConnection"/> enabling various styles of handler registration.
+    ///     Extension methods for <see cref="LspDispatcher"/> enabling various styles of handler registration.
     /// </summary>
-    public static class ClientConnectionExtensions
+    public static class LspDispatcherExtensions
     {
         /// <summary>
         ///     Register a handler for empty notifications.
         /// </summary>
-        /// <param name="clientConnection">
-        ///     The <see cref="ClientConnection"/>.
+        /// <param name="clientDispatcher">
+        ///     The <see cref="LspDispatcher"/>.
         /// </param>
         /// <param name="method">
         ///     The name of the notification method to handle.
@@ -24,10 +24,10 @@ namespace LSP.Client.Protocol
         /// <returns>
         ///     An <see cref="IDisposable"/> representing the registration.
         /// </returns>
-        public static IDisposable HandleNotification(this ClientConnection clientConnection, string method, EmptyNotificationHandler handler)
+        public static IDisposable HandleEmptyNotification(this LspDispatcher clientDispatcher, string method, EmptyNotificationHandler handler)
         {
-            if (clientConnection == null)
-                throw new ArgumentNullException(nameof(clientConnection));
+            if (clientDispatcher == null)
+                throw new ArgumentNullException(nameof(clientDispatcher));
 
             if (String.IsNullOrWhiteSpace(method))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(method)}.", nameof(method));
@@ -35,7 +35,7 @@ namespace LSP.Client.Protocol
             if (handler == null)
                 throw new ArgumentNullException(nameof(handler));
 
-            return clientConnection.RegisterHandler(
+            return clientDispatcher.RegisterHandler(
                 new DelegateEmptyNotificationHandler(method, handler)
             );
         }
@@ -46,8 +46,8 @@ namespace LSP.Client.Protocol
         /// <typeparam name="TNotification">
         ///     The notification message type.
         /// </typeparam>
-        /// <param name="clientConnection">
-        ///     The <see cref="ClientConnection"/>.
+        /// <param name="clientDispatcher">
+        ///     The <see cref="LspDispatcher"/>.
         /// </param>
         /// <param name="method">
         ///     The name of the notification method to handle.
@@ -58,10 +58,10 @@ namespace LSP.Client.Protocol
         /// <returns>
         ///     An <see cref="IDisposable"/> representing the registration.
         /// </returns>
-        public static IDisposable HandleNotification<TNotification>(this ClientConnection clientConnection, string method, NotificationHandler<TNotification> handler)
+        public static IDisposable HandleNotification<TNotification>(this LspDispatcher clientDispatcher, string method, NotificationHandler<TNotification> handler)
         {
-            if (clientConnection == null)
-                throw new ArgumentNullException(nameof(clientConnection));
+            if (clientDispatcher == null)
+                throw new ArgumentNullException(nameof(clientDispatcher));
 
             if (String.IsNullOrWhiteSpace(method))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(method)}.", nameof(method));
@@ -69,7 +69,7 @@ namespace LSP.Client.Protocol
             if (handler == null)
                 throw new ArgumentNullException(nameof(handler));
 
-            return clientConnection.RegisterHandler(
+            return clientDispatcher.RegisterHandler(
                 new DelegateNotificationHandler<TNotification>(method, handler)
             );
         }
@@ -80,8 +80,8 @@ namespace LSP.Client.Protocol
         /// <typeparam name="TRequest">
         ///     The request message type.
         /// </typeparam>
-        /// <param name="clientConnection">
-        ///     The <see cref="ClientConnection"/>.
+        /// <param name="clientDispatcher">
+        ///     The <see cref="LspDispatcher"/>.
         /// </param>
         /// <param name="method">
         ///     The name of the request method to handle.
@@ -92,10 +92,10 @@ namespace LSP.Client.Protocol
         /// <returns>
         ///     An <see cref="IDisposable"/> representing the registration.
         /// </returns>
-        public static IDisposable HandleRequest<TRequest>(this ClientConnection clientConnection, string method, RequestHandler<TRequest> handler)
+        public static IDisposable HandleRequest<TRequest>(this LspDispatcher clientDispatcher, string method, RequestHandler<TRequest> handler)
         {
-            if (clientConnection == null)
-                throw new ArgumentNullException(nameof(clientConnection));
+            if (clientDispatcher == null)
+                throw new ArgumentNullException(nameof(clientDispatcher));
 
             if (String.IsNullOrWhiteSpace(method))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(method)}.", nameof(method));
@@ -103,7 +103,7 @@ namespace LSP.Client.Protocol
             if (handler == null)
                 throw new ArgumentNullException(nameof(handler));
 
-            return clientConnection.RegisterHandler(
+            return clientDispatcher.RegisterHandler(
                 new DelegateRequestHandler<TRequest>(method, handler)
             );
         }
@@ -117,8 +117,8 @@ namespace LSP.Client.Protocol
         /// <typeparam name="TResponse">
         ///     The response message type.
         /// </typeparam>
-        /// <param name="clientConnection">
-        ///     The <see cref="ClientConnection"/>.
+        /// <param name="clientDispatcher">
+        ///     The <see cref="LspDispatcher"/>.
         /// </param>
         /// <param name="method">
         ///     The name of the request method to handle.
@@ -129,10 +129,10 @@ namespace LSP.Client.Protocol
         /// <returns>
         ///     An <see cref="IDisposable"/> representing the registration.
         /// </returns>
-        public static IDisposable HandleRequest<TRequest, TResponse>(this ClientConnection clientConnection, string method, RequestHandler<TRequest, TResponse> handler)
+        public static IDisposable HandleRequest<TRequest, TResponse>(this LspDispatcher clientDispatcher, string method, RequestHandler<TRequest, TResponse> handler)
         {
-            if (clientConnection == null)
-                throw new ArgumentNullException(nameof(clientConnection));
+            if (clientDispatcher == null)
+                throw new ArgumentNullException(nameof(clientDispatcher));
 
             if (String.IsNullOrWhiteSpace(method))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(method)}.", nameof(method));
@@ -140,7 +140,7 @@ namespace LSP.Client.Protocol
             if (handler == null)
                 throw new ArgumentNullException(nameof(handler));
 
-            return clientConnection.RegisterHandler(
+            return clientDispatcher.RegisterHandler(
                 new DelegateRequestResponseHandler<TRequest, TResponse>(method, handler)
             );
         }

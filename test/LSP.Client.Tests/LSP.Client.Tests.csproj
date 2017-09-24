@@ -25,4 +25,8 @@
     <ProjectReference Include="..\..\src\LSP.Client\LSP.Client.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Logging\" />
+  </ItemGroup>
+
 </Project>

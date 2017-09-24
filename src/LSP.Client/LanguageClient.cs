@@ -28,7 +28,7 @@ namespace LSP.Client
         /// <summary>
         ///     The dispatcher for incoming requests, notifications, and responses.
         /// </summary>
-        readonly ClientDispatcher _dispatcher = new ClientDispatcher();
+        readonly LspDispatcher _dispatcher = new LspDispatcher();
 
         /// <summary>
         ///     The handler for dynamic registration of server capabilities.
@@ -46,7 +46,7 @@ namespace LSP.Client
         /// <summary>
         ///     The underlying LSP connection to the language server process.
         /// </summary>
-        ClientConnection _connection;
+        LspConnection _connection;
 
         /// <summary>
         ///     Completion source that callers can await to determine when the language server is ready to use (i.e. initialised).
@@ -110,7 +110,7 @@ namespace LSP.Client
         /// </summary>
         public void Dispose()
         {
-            ClientConnection connection = Interlocked.Exchange(ref _connection, null);
+            LspConnection connection = Interlocked.Exchange(ref _connection, null);
             connection?.Dispose();
 
             ServerProcess serverProcess = Interlocked.Exchange(ref _process, null);
@@ -274,7 +274,7 @@ namespace LSP.Client
         /// </returns>
         public async Task Shutdown()
         {
-            ClientConnection connection = _connection;
+            LspConnection connection = _connection;
             if (connection != null)
             {
                 if (connection.IsOpen)
@@ -317,7 +317,7 @@ namespace LSP.Client
         /// </param>
         public void SendEmptyNotification(string method)
         {
-            ClientConnection connection = _connection;
+            LspConnection connection = _connection;
             if (connection == null || !connection.IsOpen)
                 throw new InvalidOperationException("Not connected to the language server.");
 
@@ -335,7 +335,7 @@ namespace LSP.Client
         /// </param>
         public void SendNotification(string method, object notification)
         {
-            ClientConnection connection = _connection;
+            LspConnection connection = _connection;
             if (connection == null || !connection.IsOpen)
                 throw new InvalidOperationException("Not connected to the language server.");
 
@@ -359,7 +359,7 @@ namespace LSP.Client
         /// </returns>
         public Task SendRequest(string method, object request, CancellationToken cancellationToken = default(CancellationToken))
         {
-            ClientConnection connection = _connection;
+            LspConnection connection = _connection;
             if (connection == null || !connection.IsOpen)
                 throw new InvalidOperationException("Not connected to the language server.");
 
@@ -386,7 +386,7 @@ namespace LSP.Client
         /// </returns>
         public Task<TResponse> SendRequest<TResponse>(string method, object request, CancellationToken cancellation = default(CancellationToken))
         {
-            ClientConnection connection = _connection;
+            LspConnection connection = _connection;
             if (connection == null || !connection.IsOpen)
                 throw new InvalidOperationException("Not connected to the language server.");
 
@@ -416,9 +416,9 @@ namespace LSP.Client
             Log.Verbose("Opening connection to language server...");
 
             if (_connection == null)
-                _connection = new ClientConnection(_rootLogger, _dispatcher, input: _process.OutputStream, output: _process.InputStream);
+                _connection = new LspConnection(Log, input: _process.OutputStream, output: _process.InputStream);
 
-            _connection.Open();
+            _connection.Open(_dispatcher);
 
             Log.Verbose("Connection to language server is open.");
         }
@@ -436,7 +436,7 @@ namespace LSP.Client
         {
             Log.Verbose("Server process has exited; language client is shutting down...");
 
-            ClientConnection connection = Interlocked.Exchange(ref _connection, null);
+            LspConnection connection = Interlocked.Exchange(ref _connection, null);
             if (connection != null)
             {
                 using (connection)

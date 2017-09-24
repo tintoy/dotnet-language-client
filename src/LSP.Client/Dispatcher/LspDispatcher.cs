@@ -12,7 +12,7 @@ namespace LSP.Client.Dispatcher
     /// <summary>
     ///     Dispatches requests and notifications from a language server to a language client.
     /// </summary>
-    public class ClientDispatcher
+    public class LspDispatcher
     {
         /// <summary>
         ///     Invokers for registered handlers.
@@ -20,9 +20,9 @@ namespace LSP.Client.Dispatcher
         readonly ConcurrentDictionary<string, IHandler> _handlers = new ConcurrentDictionary<string, IHandler>();
 
         /// <summary>
-        ///     Create a new <see cref="ClientDispatcher"/>.
+        ///     Create a new <see cref="LspDispatcher"/>.
         /// </summary>
-        public ClientDispatcher()
+        public LspDispatcher()
         {
         }
 

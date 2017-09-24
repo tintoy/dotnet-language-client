@@ -83,18 +83,34 @@ namespace LSP.Client.Tests
         }
 
         /// <summary>
-        ///     Create a <see cref="ClientConnection"/> for the test's <see cref="PipeServerProcess"/>.
+        ///     Create a <see cref="LspConnection"/> that uses the client ends of the the test's <see cref="PipeServerProcess"/> streams.
         /// </summary>
         /// <returns>
-        ///     The <see cref="ClientConnection"/>.
+        ///     The <see cref="LspConnection"/>.
         /// </returns>
-        protected async Task<ClientConnection> CreateConnection()
+        protected async Task<LspConnection> CreateClientConnection()
         {
             if (!_serverProcess.IsRunning)
                 await StartServer();
 
-            ClientDispatcher dispatcher = new ClientDispatcher();
-            ClientConnection connection = new ClientConnection(Log, dispatcher, input: ServerInputStream, output: ServerOutputStream);
+            LspConnection connection = new LspConnection(Log, input: ServerOutputStream, output: ServerInputStream);
+            Disposal.Add(connection);
+
+            return connection;
+        }
+
+        /// <summary>
+        ///     Create a <see cref="LspConnection"/> that uses the server ends of the the test's <see cref="PipeServerProcess"/> streams.
+        /// </summary>
+        /// <returns>
+        ///     The <see cref="LspConnection"/>.
+        /// </returns>
+        protected async Task<LspConnection> CreateServerConnection()
+        {
+            if (!_serverProcess.IsRunning)
+                await StartServer();
+
+            LspConnection connection = new LspConnection(Log, input: ClientOutputStream, output: ClientInputStream);
             Disposal.Add(connection);
 
             return connection;
