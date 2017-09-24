@@ -12,7 +12,7 @@ namespace LSP.Client
     using Clients;
     using Dispatcher;
     using Handlers;
-    using Launcher;
+    using Processes;
     using Protocol;
 
     /// <summary>

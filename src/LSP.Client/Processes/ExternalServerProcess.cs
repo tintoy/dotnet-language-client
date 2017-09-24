@@ -4,7 +4,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LSP.Client.Launcher
+namespace LSP.Client.Processes
 {
     /// <summary>
     ///     An <see cref="ExternalServerProcess"/> is a <see cref="ServerProcess"/> that launches its server as an external process.

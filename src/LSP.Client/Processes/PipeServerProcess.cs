@@ -2,7 +2,7 @@
 using System.IO.Pipes;
 using System.Threading.Tasks;
 
-namespace LSP.Client.Launcher
+namespace LSP.Client.Processes
 {
     /// <summary>
     ///     An <see cref="PipeServerProcess"/> is a <see cref="ServerProcess"/> that creates anonymous pipe streams to connect a language client to a language server in the same process.
