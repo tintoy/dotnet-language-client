@@ -12,6 +12,7 @@ namespace LSP.Client
     using Clients;
     using Dispatcher;
     using Handlers;
+    using Logging;
     using Processes;
     using Protocol;
 
@@ -35,11 +36,6 @@ namespace LSP.Client
         readonly DynamicRegistrationHandler _dynamicRegistrationHandler = new DynamicRegistrationHandler();
 
         /// <summary>
-        ///     The root application logger (used when creating sub-components).
-        /// </summary>
-        readonly ILogger _rootLogger;
-
-        /// <summary>
         ///     The server process.
         /// </summary>
         ServerProcess _process;
@@ -58,13 +54,13 @@ namespace LSP.Client
         ///     Create a new <see cref="LanguageClient"/>.
         /// </summary>
         /// <param name="logger">
-        ///     The application logger.
+        ///     The logger to use.
         /// </param>
         /// <param name="serverStartInfo">
         ///     <see cref="ProcessStartInfo"/> used to start the server process.
         /// </param>
         public LanguageClient(ILogger logger, ProcessStartInfo serverStartInfo)
-            : this(logger, new ExternalServerProcess(serverStartInfo))
+            : this(logger, new ExternalServerProcess(logger, serverStartInfo))
         {
         }
 
@@ -91,15 +87,14 @@ namespace LSP.Client
         ///     Create a new <see cref="LanguageClient"/>.
         /// </summary>
         /// <param name="logger">
-        ///     The application logger.
+        ///     The logger to use.
         /// </param>
         LanguageClient(ILogger logger)
         {
             if (logger == null)
                 throw new ArgumentNullException(nameof(logger));
 
-            _rootLogger = logger;
-            Log = logger.ForContext<LanguageClient>();
+            Log = logger.ForSourceContext<LanguageClient>();
             Workspace = new WorkspaceClient(this);
             Window = new WindowClient(this);
             TextDocument = new TextDocumentClient(this);

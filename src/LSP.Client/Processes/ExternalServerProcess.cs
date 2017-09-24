@@ -27,7 +27,7 @@ namespace LSP.Client.Processes
         ///     Create a new <see cref="ExternalServerProcess"/>.
         /// </summary>
         /// <param name="logger">
-        ///     The application logger.
+        ///     The logger to use.
         /// </param>
         /// <param name="serverStartInfo">
         ///     A <see cref="ProcessStartInfo"/> that describes how to start the server.

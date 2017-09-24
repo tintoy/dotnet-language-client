@@ -14,6 +14,7 @@ namespace LSP.Client.Protocol
 {
     using Dispatcher;
     using Handlers;
+    using Logging;
 
     /// <summary>
     ///     A client-side LSP connection.
@@ -120,7 +121,7 @@ namespace LSP.Client.Protocol
         ///     Create a new <see cref="ClientConnection"/>.
         /// </summary>
         /// <param name="logger">
-        ///     The root application logger.
+        ///     The logger to use.
         /// </param>
         /// <param name="dispatcher">
         ///     The <see cref="ClientDispatcher"/> used to dispatch messages to handlers.
@@ -151,7 +152,7 @@ namespace LSP.Client.Protocol
             if (!output.CanWrite)
                 throw new ArgumentException("Output stream does not support reading.", nameof(output));
 
-            Log = logger.ForContext<ClientConnection>();
+            Log = logger.ForSourceContext<ClientConnection>();
             _dispatcher = dispatcher;
             _input = input;
             _output = output;

@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 
 namespace LSP.Client.Processes
 {
+    using Logging;
+
     /// <summary>
     ///     A <see cref="ServerProcess"/> is responsible for launching or attaching to a language server, providing access to its input and output streams, and tracking its lifetime.
     /// </summary>
@@ -15,14 +17,14 @@ namespace LSP.Client.Processes
         ///     Create a new <see cref="ServerProcess"/>.
         /// </summary>
         /// <param name="logger">
-        ///     The root application logger.
+        ///     The logger to use.
         /// </param>
         protected ServerProcess(ILogger logger)
         {
             if (logger == null)
                 throw new ArgumentNullException(nameof(logger));
 
-            Log = logger.ForContext(
+            Log = logger.ForSourceContext(
                 source: GetType()
             );
 

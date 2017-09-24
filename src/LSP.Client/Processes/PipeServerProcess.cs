@@ -15,7 +15,7 @@ namespace LSP.Client.Processes
         ///     Create a new <see cref="PipeServerProcess"/>.
         /// </summary>
         /// <param name="logger">
-        ///     The application logger.
+        ///     The logger to use.
         /// </param>
         public PipeServerProcess(ILogger logger)
             : base(logger)
