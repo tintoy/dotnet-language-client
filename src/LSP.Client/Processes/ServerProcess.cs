@@ -14,9 +14,15 @@ namespace LSP.Client.Processes
         /// <summary>
         ///     Create a new <see cref="ServerProcess"/>.
         /// </summary>
-        protected ServerProcess()
+        /// <param name="logger">
+        ///     The root application logger.
+        /// </param>
+        protected ServerProcess(ILogger logger)
         {
-            Log = Serilog.Log.ForContext(
+            if (logger == null)
+                throw new ArgumentNullException(nameof(logger));
+
+            Log = logger.ForContext(
                 source: GetType()
             );
 

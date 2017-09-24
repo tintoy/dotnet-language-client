@@ -69,7 +69,7 @@ namespace Client
             };
 
             Log.Information("Starting server...");
-            LanguageClient client = new LanguageClient(serverStartInfo)
+            LanguageClient client = new LanguageClient(Log.Logger, serverStartInfo)
             {
                 ClientCapabilities =
                 {

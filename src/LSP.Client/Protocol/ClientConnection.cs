@@ -119,6 +119,9 @@ namespace LSP.Client.Protocol
         /// <summary>
         ///     Create a new <see cref="ClientConnection"/>.
         /// </summary>
+        /// <param name="logger">
+        ///     The root application logger.
+        /// </param>
         /// <param name="dispatcher">
         ///     The <see cref="ClientDispatcher"/> used to dispatch messages to handlers.
         /// </param>
@@ -128,8 +131,11 @@ namespace LSP.Client.Protocol
         /// <param name="output">
         ///     The output stream.
         /// </param>
-        public ClientConnection(ClientDispatcher dispatcher, Stream input, Stream output)
+        public ClientConnection(ILogger logger, ClientDispatcher dispatcher, Stream input, Stream output)
         {
+            if (logger == null)
+                throw new ArgumentNullException(nameof(logger));
+
             if (dispatcher == null)
                 throw new ArgumentNullException(nameof(dispatcher));
 
@@ -145,6 +151,7 @@ namespace LSP.Client.Protocol
             if (!output.CanWrite)
                 throw new ArgumentException("Output stream does not support reading.", nameof(output));
 
+            Log = logger.ForContext<ClientConnection>();
             _dispatcher = dispatcher;
             _input = input;
             _output = output;
@@ -163,7 +170,7 @@ namespace LSP.Client.Protocol
         /// <summary>
         ///     The connection's logger.
         /// </summary>
-        ILogger Log { get; } = Serilog.Log.ForContext<ClientConnection>();
+        ILogger Log { get; }
 
         /// <summary>
         ///     Is the connection open?

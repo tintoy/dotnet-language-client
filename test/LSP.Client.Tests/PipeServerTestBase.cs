@@ -4,11 +4,9 @@ using Xunit.Abstractions;
 
 namespace LSP.Client.Tests
 {
-    using Lsp.Capabilities.Client;
+    using Dispatcher;
     using Processes;
-    using System.Reactive.Disposables;
-    using System.Reflection;
-    using Xunit;
+    using Protocol;
 
     /// <summary>
     ///     The base class for test suites that use a <see cref="PipeServerProcess"/>.
@@ -30,7 +28,7 @@ namespace LSP.Client.Tests
         protected PipeServerTestBase(ITestOutputHelper testOutput)
             : base(testOutput)
         {
-            _serverProcess = new PipeServerProcess();
+            _serverProcess = new PipeServerProcess(Log);
             Disposal.Add(_serverProcess);
         }
 
@@ -75,13 +73,31 @@ namespace LSP.Client.Tests
             if (!_serverProcess.IsRunning)
                 await StartServer();
 
-            LanguageClient client = new LanguageClient(_serverProcess);
+            LanguageClient client = new LanguageClient(Log, _serverProcess);
             Disposal.Add(client);
 
             if (initialize)
                 await client.Initialize(WorkspaceRoot);
 
             return client;
+        }
+
+        /// <summary>
+        ///     Create a <see cref="ClientConnection"/> for the test's <see cref="PipeServerProcess"/>.
+        /// </summary>
+        /// <returns>
+        ///     The <see cref="ClientConnection"/>.
+        /// </returns>
+        protected async Task<ClientConnection> CreateConnection()
+        {
+            if (!_serverProcess.IsRunning)
+                await StartServer();
+
+            ClientDispatcher dispatcher = new ClientDispatcher();
+            ClientConnection connection = new ClientConnection(Log, dispatcher, input: ServerInputStream, output: ServerOutputStream);
+            Disposal.Add(connection);
+
+            return connection;
         }
 
         /// <summary>

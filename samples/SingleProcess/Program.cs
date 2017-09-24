@@ -3,7 +3,7 @@ using Lsp;
 using Lsp.Capabilities.Client;
 using LSP.Client;
 using LSP.Client.Dispatcher;
-using LSP.Client.Launcher;
+using LSP.Client.Processes;
 using LSP.Client.Protocol;
 using Newtonsoft.Json.Linq;
 using Serilog;
@@ -64,12 +64,12 @@ namespace SingleProcess
         /// </returns>
         static async Task AsyncMain()
         {
-            using (PipeServerProcess serverLauncher = new PipeServerProcess())
+            using (PipeServerProcess serverProcess = new PipeServerProcess())
             {
-                await serverLauncher.Start();
+                await serverProcess.Start();
 
-                Task clientTask = RunLanguageClient(serverLauncher);
-                Task serverTask = RunLanguageServer(input: serverLauncher.ClientOutputStream, output: serverLauncher.ClientInputStream);
+                Task clientTask = RunLanguageClient(serverProcess);
+                Task serverTask = RunLanguageServer(input: serverProcess.ClientOutputStream, output: serverProcess.ClientInputStream);
 
                 await Task.WhenAll(clientTask, serverTask);
             }
@@ -78,19 +78,19 @@ namespace SingleProcess
         /// <summary>
         ///     Run a language client over the specified streams.
         /// </summary>
-        /// <param name="serverLauncher">
+        /// <param name="serverProcess">
         ///     The <see cref="PipeServerProcess"/> used to wire up the client and server streams.
         /// </param>
         /// <returns>
         ///     A <see cref="Task"/> representing the operation.
         /// </returns>
-        static async Task RunLanguageClient(PipeServerProcess serverLauncher)
+        static async Task RunLanguageClient(PipeServerProcess serverProcess)
         {
-            if (serverLauncher == null)
-                throw new ArgumentNullException(nameof(serverLauncher));
+            if (serverProcess == null)
+                throw new ArgumentNullException(nameof(serverProcess));
             
             Log.Information("Starting client...");
-            LanguageClient client = new LanguageClient(serverLauncher)
+            LanguageClient client = new LanguageClient(Log.Logger, serverProcess)
             {
                 ClientCapabilities =
                 {

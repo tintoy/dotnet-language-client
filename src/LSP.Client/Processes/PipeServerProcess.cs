@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using Serilog;
+using System.IO;
 using System.IO.Pipes;
 using System.Threading.Tasks;
 
@@ -13,7 +14,11 @@ namespace LSP.Client.Processes
         /// <summary>
         ///     Create a new <see cref="PipeServerProcess"/>.
         /// </summary>
-        public PipeServerProcess()
+        /// <param name="logger">
+        ///     The application logger.
+        /// </param>
+        public PipeServerProcess(ILogger logger)
+            : base(logger)
         {
         }
 

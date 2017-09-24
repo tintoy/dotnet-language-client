@@ -35,6 +35,11 @@ namespace LSP.Client
         readonly DynamicRegistrationHandler _dynamicRegistrationHandler = new DynamicRegistrationHandler();
 
         /// <summary>
+        ///     The root application logger (used when creating sub-components).
+        /// </summary>
+        readonly ILogger _rootLogger;
+
+        /// <summary>
         ///     The server process.
         /// </summary>
         ServerProcess _process;
@@ -52,22 +57,28 @@ namespace LSP.Client
         /// <summary>
         ///     Create a new <see cref="LanguageClient"/>.
         /// </summary>
+        /// <param name="logger">
+        ///     The application logger.
+        /// </param>
         /// <param name="serverStartInfo">
         ///     <see cref="ProcessStartInfo"/> used to start the server process.
         /// </param>
-        public LanguageClient(ProcessStartInfo serverStartInfo)
-            : this(new ExternalServerProcess(serverStartInfo))
+        public LanguageClient(ILogger logger, ProcessStartInfo serverStartInfo)
+            : this(logger, new ExternalServerProcess(serverStartInfo))
         {
         }
 
         /// <summary>
         ///     Create a new <see cref="LanguageClient"/>.
         /// </summary>
+        /// <param name="logger">
+        ///     The application logger.
+        /// </param>
         /// <param name="process">
         ///     <see cref="ServerProcess"/> used to start or connect to the server process.
         /// </param>
-        public LanguageClient(ServerProcess process)
-            : this()
+        public LanguageClient(ILogger logger, ServerProcess process)
+            : this(logger)
         {
             if (process == null)
                 throw new ArgumentNullException(nameof(process));
@@ -79,8 +90,16 @@ namespace LSP.Client
         /// <summary>
         ///     Create a new <see cref="LanguageClient"/>.
         /// </summary>
-        LanguageClient()
+        /// <param name="logger">
+        ///     The application logger.
+        /// </param>
+        LanguageClient(ILogger logger)
         {
+            if (logger == null)
+                throw new ArgumentNullException(nameof(logger));
+
+            _rootLogger = logger;
+            Log = logger.ForContext<LanguageClient>();
             Workspace = new WorkspaceClient(this);
             Window = new WindowClient(this);
             TextDocument = new TextDocumentClient(this);
@@ -96,14 +115,14 @@ namespace LSP.Client
             ClientConnection connection = Interlocked.Exchange(ref _connection, null);
             connection?.Dispose();
 
-            ServerProcess serverLauncher = Interlocked.Exchange(ref _process, null);
-            serverLauncher?.Dispose();
+            ServerProcess serverProcess = Interlocked.Exchange(ref _process, null);
+            serverProcess?.Dispose();
         }
 
         /// <summary>
         ///     The client's logger.
         /// </summary>
-        ILogger Log { get; } = Serilog.Log.ForContext<LanguageClient>();
+        ILogger Log { get; }
 
         /// <summary>
         ///     The LSP Text Document API.
@@ -270,11 +289,11 @@ namespace LSP.Client
                 await connection.HasClosed;
             }
 
-            ServerProcess serverLauncher = _process;
-            if (serverLauncher != null)
+            ServerProcess serverProcess = _process;
+            if (serverProcess != null)
             {
-                if (serverLauncher.IsRunning)
-                    await serverLauncher.Stop();
+                if (serverProcess.IsRunning)
+                    await serverProcess.Stop();
             }
 
             IsInitialized = false;
@@ -399,7 +418,7 @@ namespace LSP.Client
             Log.Verbose("Opening connection to language server...");
 
             if (_connection == null)
-                _connection = new ClientConnection(_dispatcher, input: _process.OutputStream, output: _process.InputStream);
+                _connection = new ClientConnection(_rootLogger, _dispatcher, input: _process.OutputStream, output: _process.InputStream);
 
             _connection.Open();
 

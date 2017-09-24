@@ -76,7 +76,18 @@ namespace LSP.Client.Tests
         /// </param>
         protected virtual void Dispose(bool disposing)
         {
-            Disposal.Dispose();
+            if (disposing)
+            {
+                try
+                {
+                    Disposal.Dispose();
+                }
+                finally
+                {
+                    if (Log is IDisposable logDisposal)
+                        logDisposal.Dispose();
+                }
+            }
         }
 
         /// <summary>

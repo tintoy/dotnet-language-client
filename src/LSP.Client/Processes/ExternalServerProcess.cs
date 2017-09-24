@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Serilog;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -25,10 +26,14 @@ namespace LSP.Client.Processes
         /// <summary>
         ///     Create a new <see cref="ExternalServerProcess"/>.
         /// </summary>
+        /// <param name="logger">
+        ///     The application logger.
+        /// </param>
         /// <param name="serverStartInfo">
         ///     A <see cref="ProcessStartInfo"/> that describes how to start the server.
         /// </param>
-        public ExternalServerProcess(ProcessStartInfo serverStartInfo)
+        public ExternalServerProcess(ILogger logger, ProcessStartInfo serverStartInfo)
+            : base(logger)
         {
             if (serverStartInfo == null)
                 throw new ArgumentNullException(nameof(serverStartInfo));

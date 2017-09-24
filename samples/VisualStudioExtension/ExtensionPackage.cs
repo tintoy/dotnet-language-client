@@ -130,7 +130,7 @@ namespace VisualStudioExtension
             {
                 Trace.WriteLine("Creating language service...");
 
-                LanguageClient = new LanguageClient(new ProcessStartInfo("dotnet")
+                LanguageClient = new LanguageClient(Log.Logger, new ProcessStartInfo("dotnet")
                 {
                     Arguments = @"""D:\Development\github\tintoy\msbuild-project-tools\out\language-server\MSBuildProjectTools.LanguageServer.Host.dll""",
                     //Arguments = @"""D:\Development\github\tintoy\dotnet-language-client\samples\Server\bin\Debug\netcoreapp2.0\Server.dll""",
