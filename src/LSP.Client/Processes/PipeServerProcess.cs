@@ -40,7 +40,7 @@ namespace LSP.Client.Processes
         /// <summary>
         ///     Is the server running?
         /// </summary>
-        public override bool IsRunning { get; }
+        public override bool IsRunning => ServerStartCompletion.Task.IsCompleted;
 
         /// <summary>
         ///     An <see cref="AnonymousPipeClientStream"/> that the client reads messages from.

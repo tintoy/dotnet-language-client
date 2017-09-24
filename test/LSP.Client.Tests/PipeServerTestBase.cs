@@ -73,6 +73,8 @@ namespace LSP.Client.Tests
             if (!_serverProcess.IsRunning)
                 await StartServer();
 
+            await _serverProcess.HasStarted;
+
             LanguageClient client = new LanguageClient(Log, _serverProcess);
             Disposal.Add(client);
 
@@ -93,6 +95,8 @@ namespace LSP.Client.Tests
             if (!_serverProcess.IsRunning)
                 await StartServer();
 
+            await _serverProcess.HasStarted;
+
             LspConnection connection = new LspConnection(Log, input: ServerOutputStream, output: ServerInputStream);
             Disposal.Add(connection);
 
@@ -109,6 +113,8 @@ namespace LSP.Client.Tests
         {
             if (!_serverProcess.IsRunning)
                 await StartServer();
+
+            await _serverProcess.HasStarted;
 
             LspConnection connection = new LspConnection(Log, input: ClientOutputStream, output: ClientInputStream);
             Disposal.Add(connection);

@@ -1,6 +1,6 @@
-using Serilog;
 using Serilog.Core;
 using System;
+using System.Linq;
 using Serilog.Events;
 using Xunit.Abstractions;
 
@@ -54,7 +54,24 @@ namespace LSP.Client.Tests.Logging
             if (logEvent.Level < _levelSwitch.MinimumLevel)
                 return;
 
-            string message = logEvent.RenderMessage();
+            string sourceContext = String.Empty;
+            if (logEvent.Properties.TryGetValue("SourceContext", out LogEventPropertyValue sourceContextValue))
+            {
+                if (sourceContextValue is ScalarValue scalarValue)
+                    sourceContext = scalarValue.Value?.ToString() ?? String.Empty;
+                else
+                    sourceContext = sourceContextValue.ToString();
+            }
+
+            // Trim off namespace, if possible.
+            string[] sourceContextSegments = sourceContext.Split('.');
+            sourceContext = sourceContextSegments[sourceContextSegments.Length - 1];
+
+            string prefix = !String.IsNullOrWhiteSpace(sourceContext)
+                ? $"[{sourceContext}/{logEvent.Level}] "
+                : $"[{logEvent.Level}] ";
+
+            string message = prefix + logEvent.RenderMessage();
             if (logEvent.Exception != null)
                 message += "\n" + logEvent.Exception.ToString();
 

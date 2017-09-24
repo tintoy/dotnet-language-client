@@ -1,9 +1,11 @@
 ﻿using Serilog;
 using Serilog.Context;
 using Serilog.Core;
+using Serilog.Events;
 using System;
 using System.Reactive.Disposables;
 using System.Reflection;
+using System.Threading;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,6 +30,11 @@ namespace LSP.Client.Tests
             if (testOutput == null)
                 throw new ArgumentNullException(nameof(testOutput));
 
+            // We *must* have a synchronisation context for the test, or we'll see random deadlocks.
+            SynchronizationContext.SetSynchronizationContext(
+                new SynchronizationContext()
+            );
+
             TestOutput = testOutput;
 
             // Redirect component logging to Serilog.
@@ -35,6 +42,9 @@ namespace LSP.Client.Tests
                 new LoggerConfiguration()
                     .MinimumLevel.Verbose()
                     .Enrich.FromLogContext()
+                    .WriteTo.Debug(
+                        restrictedToMinimumLevel: LogEventLevel.Verbose
+                    )
                     .WriteTo.TestOutput(TestOutput, LogLevelSwitch)
                     .CreateLogger();
 
