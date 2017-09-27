@@ -18,6 +18,9 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Client", "samples\Client\Client.csproj", "{9AA8E6F8-50F8-444A-8C74-FC94339509F6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VisualStudioExtension", "samples\VisualStudioExtension\VisualStudioExtension.csproj", "{90E17BBD-AC7B-4D1C-95FE-CB5176737CED}"
+	ProjectSection(ProjectDependencies) = postProject
+		{565262C2-C4BA-4F84-AEFD-640957242DB7} = {565262C2-C4BA-4F84-AEFD-640957242DB7}
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SingleProcess", "samples\SingleProcess\SingleProcess.csproj", "{72D7132D-ADEB-42D6-B0BD-3024024CA09C}"
 EndProject
