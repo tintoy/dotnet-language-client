@@ -38,7 +38,7 @@ namespace LSP.Client.Protocol
         /// <summary>
         ///     The length of time to wait for the outgoing message queue to drain.
         /// </summary>
-        public static readonly TimeSpan FlushTimeout = TimeSpan.FromSeconds(5);
+        public static TimeSpan FlushTimeout { get; set; } = TimeSpan.FromSeconds(5);
 
         /// <summary>
         ///     The encoding used for message headers.
@@ -98,7 +98,7 @@ namespace LSP.Client.Protocol
         /// <summary>
         ///     A <see cref="Task"/> representing the stopping of the connection's send, receive, and dispatch loops.
         /// </summary>
-        Task _hasClosedTask = Task.CompletedTask;
+        Task _hasDisconnectedTask = Task.CompletedTask;
 
         /// <summary>
         ///     The <see cref="LspDispatcher"/> used to dispatch messages to handlers.
@@ -159,7 +159,7 @@ namespace LSP.Client.Protocol
         /// </summary>
         public void Dispose()
         {
-            Close();
+            Disconnect();
 
             _cancellationSource?.Dispose();
         }
@@ -177,7 +177,7 @@ namespace LSP.Client.Protocol
         /// <summary>
         ///     A task that completes when the connection is closed.
         /// </summary>
-        public Task HasClosed => _hasClosedTask;
+        public Task HasHasDisconnected => _hasDisconnectedTask;
 
         /// <summary>
         ///     Register a message handler.
@@ -206,7 +206,7 @@ namespace LSP.Client.Protocol
         /// <param name="dispatcher">
         ///     The <see cref="LspDispatcher"/> used to dispatch messages to handlers.
         /// </param>
-        public void Open(LspDispatcher dispatcher)
+        public void Connect(LspDispatcher dispatcher)
         {
             if (dispatcher == null)
                 throw new ArgumentNullException(nameof(dispatcher));
@@ -222,8 +222,7 @@ namespace LSP.Client.Protocol
             _receiveLoop = ReceiveLoop();
             _dispatchLoop = DispatchLoop();
 
-            // We don't care when the receive loop terminates; in fact, with a PipeStream it ignores cancellation and won't terminate until the stream is closed.
-            _hasClosedTask = Task.WhenAll(_sendLoop, _dispatchLoop);
+            _hasDisconnectedTask = Task.WhenAll(_sendLoop, _receiveLoop, _dispatchLoop);
         }
 
         /// <summary>
@@ -232,7 +231,7 @@ namespace LSP.Client.Protocol
         /// <param name="flushOutgoing">
         ///     If <c>true</c>, stop receiving and block until all outgoing messages have been sent.
         /// </param>
-        public void Close(bool flushOutgoing = false)
+        public void Disconnect(bool flushOutgoing = false)
         {
             if (flushOutgoing)
             {

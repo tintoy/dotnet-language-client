@@ -63,7 +63,7 @@ namespace LSP.Client
         ///     A <see cref="ProcessStartInfo"/> describing how to start the server process.
         /// </param>
         public LanguageClient(ILogger logger, ProcessStartInfo serverStartInfo)
-            : this(logger, new ExternalServerProcess(logger, serverStartInfo))
+            : this(logger, new StdioServerProcess(logger, serverStartInfo))
         {
         }
 
@@ -199,7 +199,7 @@ namespace LSP.Client
             get
             {
                 return Task.WhenAll(
-                    _connection.HasClosed,
+                    _connection.HasHasDisconnected,
                     _process?.HasExited ?? Task.CompletedTask
                 );
             }
@@ -281,10 +281,10 @@ namespace LSP.Client
                 {
                     connection.SendEmptyNotification("shutdown");
                     connection.SendEmptyNotification("exit");
-                    connection.Close(flushOutgoing: true);
+                    connection.Disconnect(flushOutgoing: true);
                 }
 
-                await connection.HasClosed;
+                await connection.HasHasDisconnected;
             }
 
             ServerProcess serverProcess = _process;
@@ -418,7 +418,7 @@ namespace LSP.Client
             if (_connection == null)
                 _connection = new LspConnection(Log, input: _process.OutputStream, output: _process.InputStream);
 
-            _connection.Open(_dispatcher);
+            _connection.Connect(_dispatcher);
 
             Log.Verbose("Connection to language server is open.");
         }
@@ -441,8 +441,8 @@ namespace LSP.Client
             {
                 using (connection)
                 {
-                    connection.Close();
-                    await connection.HasClosed;
+                    connection.Disconnect();
+                    await connection.HasHasDisconnected;
                 }
             }
 

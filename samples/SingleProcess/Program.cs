@@ -64,7 +64,7 @@ namespace SingleProcess
         /// </returns>
         static async Task AsyncMain()
         {
-            using (PipeServerProcess serverProcess = new PipeServerProcess(Log.Logger))
+            using (NamedPipeServerProcess serverProcess = new NamedPipeServerProcess("single-process-sample", Log.Logger))
             {
                 await serverProcess.Start();
 
@@ -79,12 +79,12 @@ namespace SingleProcess
         ///     Run a language client over the specified streams.
         /// </summary>
         /// <param name="serverProcess">
-        ///     The <see cref="PipeServerProcess"/> used to wire up the client and server streams.
+        ///     The <see cref="NamedPipeServerProcess"/> used to wire up the client and server streams.
         /// </param>
         /// <returns>
         ///     A <see cref="Task"/> representing the operation.
         /// </returns>
-        static async Task RunLanguageClient(PipeServerProcess serverProcess)
+        static async Task RunLanguageClient(NamedPipeServerProcess serverProcess)
         {
             if (serverProcess == null)
                 throw new ArgumentNullException(nameof(serverProcess));
@@ -166,7 +166,6 @@ namespace SingleProcess
             Log.Information("Initialising language server...");
 
             LanguageServer languageServer = new LanguageServer(input, output);
-            TaskCompletionSource<object> serverShutdownCompletion = new TaskCompletionSource<object>();
 
             languageServer.AddHandler(
                 new ConfigurationHandler()
@@ -179,8 +178,6 @@ namespace SingleProcess
             languageServer.Shutdown += shutdownRequested =>
             {
                 Log.Information("Language server shutdown (ShutDownRequested={ShutDownRequested}).", shutdownRequested);
-
-                serverShutdownCompletion.SetResult(null);
             };
             languageServer.Exit += exitCode =>
             {
@@ -188,10 +185,6 @@ namespace SingleProcess
             };
 
             await languageServer.Initialize();
-
-            Log.Information("Language server initialised; waiting for shutdown...");
-
-            await serverShutdownCompletion.Task;
 
             Log.Information("Language server has shut down.");
         }

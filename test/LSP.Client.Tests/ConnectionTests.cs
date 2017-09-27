@@ -42,17 +42,17 @@ namespace LSP.Client.Tests
 
                 testCompletion.SetResult(null);
             });
-            serverConnection.Open(serverDispatcher);
+            serverConnection.Connect(serverDispatcher);
 
-            clientConnection.Open(new LspDispatcher());
+            clientConnection.Connect(new LspDispatcher());
             clientConnection.SendEmptyNotification("test");
 
             await testCompletion.Task;
 
-            clientConnection.Close(flushOutgoing: true);
-            serverConnection.Close();
+            clientConnection.Disconnect(flushOutgoing: true);
+            serverConnection.Disconnect();
 
-            await Task.WhenAll(clientConnection.HasClosed, serverConnection.HasClosed);
+            await Task.WhenAll(clientConnection.HasHasDisconnected, serverConnection.HasHasDisconnected);
         }
 
         /// <summary>
@@ -73,17 +73,17 @@ namespace LSP.Client.Tests
 
                 testCompletion.SetResult(null);
             });
-            clientConnection.Open(clientDispatcher);
+            clientConnection.Connect(clientDispatcher);
 
-            serverConnection.Open(new LspDispatcher());
+            serverConnection.Connect(new LspDispatcher());
             serverConnection.SendEmptyNotification("test");
 
             await testCompletion.Task;
 
-            serverConnection.Close(flushOutgoing: true);
-            clientConnection.Close();
+            serverConnection.Disconnect(flushOutgoing: true);
+            clientConnection.Disconnect();
 
-            await Task.WhenAll(clientConnection.HasClosed, serverConnection.HasClosed);
+            await Task.WhenAll(clientConnection.HasHasDisconnected, serverConnection.HasHasDisconnected);
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Threading.Tasks;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ namespace LSP.Client.Tests
         /// <summary>
         ///     The <see cref="PipeServerProcess"/> used to connect client and server streams.
         /// </summary>
-        readonly PipeServerProcess _serverProcess;
+        readonly NamedPipeServerProcess _serverProcess;
 
         /// <summary>
         ///     Create a new <see cref="PipeServerTestBase"/>.
@@ -28,7 +29,7 @@ namespace LSP.Client.Tests
         protected PipeServerTestBase(ITestOutputHelper testOutput)
             : base(testOutput)
         {
-            _serverProcess = new PipeServerProcess(Log);
+            _serverProcess = new NamedPipeServerProcess(Guid.NewGuid().ToString("N"), Log);
             Disposal.Add(_serverProcess);
         }
 

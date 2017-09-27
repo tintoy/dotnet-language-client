@@ -1,4 +1,5 @@
 ﻿using Serilog;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipes;
 using System.Threading.Tasks;
@@ -6,24 +7,28 @@ using System.Threading.Tasks;
 namespace LSP.Client.Processes
 {
     /// <summary>
-    ///     An <see cref="PipeServerProcess"/> is a <see cref="ServerProcess"/> that creates anonymous pipe streams to connect a language client to a language server in the same process.
+    ///     A <see cref="NamedPipeServerProcess"/> is a <see cref="ServerProcess"/> that creates named pipe streams to connect a language client to a language server in the same process.
     /// </summary>
-    public class PipeServerProcess
+    public class NamedPipeServerProcess
         : ServerProcess
     {
         /// <summary>
-        ///     Create a new <see cref="PipeServerProcess"/>.
+        ///     Create a new <see cref="NamedPipeServerProcess"/>.
         /// </summary>
+        /// <param name="baseName">
+        ///     The base name (prefix) used to create the named pipes.
+        /// </param>
         /// <param name="logger">
         ///     The logger to use.
         /// </param>
-        public PipeServerProcess(ILogger logger)
+        public NamedPipeServerProcess(string baseName, ILogger logger)
             : base(logger)
         {
+            BaseName = baseName;
         }
 
         /// <summary>
-        ///     Dispose of resources being used by the <see cref="PipeServerProcess"/>.
+        ///     Dispose of resources being used by the <see cref="NamedPipeServerProcess"/>.
         /// </summary>
         /// <param name="disposing">
         ///     Explicit disposal?
@@ -36,6 +41,10 @@ namespace LSP.Client.Processes
             base.Dispose(disposing);
         }
 
+        /// <summary>
+        ///     The base name (prefix) used to create the named pipes.
+        /// </summary>
+        public string BaseName { get; }
 
         /// <summary>
         ///     Is the server running?
@@ -43,24 +52,24 @@ namespace LSP.Client.Processes
         public override bool IsRunning => ServerStartCompletion.Task.IsCompleted;
 
         /// <summary>
-        ///     An <see cref="AnonymousPipeClientStream"/> that the client reads messages from.
+        ///     A <see cref="NamedPipeClientStream"/> that the client reads messages from.
         /// </summary>
-        public AnonymousPipeClientStream ClientInputStream { get; protected set; }
+        public NamedPipeClientStream ClientInputStream { get; protected set; }
 
         /// <summary>
-        ///     An <see cref="AnonymousPipeClientStream"/> that the client writes messages to.
+        ///     A <see cref="NamedPipeClientStream"/> that the client writes messages to.
         /// </summary>
-        public AnonymousPipeClientStream ClientOutputStream { get; protected set; }
+        public NamedPipeClientStream ClientOutputStream { get; protected set; }
 
         /// <summary>
-        ///     An <see cref="AnonymousPipeServerStream"/> that the server reads messages from.
+        ///     A <see cref="NamedPipeServerStream"/> that the server reads messages from.
         /// </summary>
-        public AnonymousPipeServerStream ServerInputStream { get; protected set; }
+        public NamedPipeServerStream ServerInputStream { get; protected set; }
 
         /// <summary>
-        ///     An <see cref="AnonymousPipeServerStream"/> that the server writes messages to.
+        ///     A <see cref="NamedPipeServerStream"/> that the server writes messages to.
         /// </summary>
-        public AnonymousPipeServerStream ServerOutputStream { get; protected set; }
+        public NamedPipeServerStream ServerOutputStream { get; protected set; }
 
         /// <summary>
         ///     The server's input stream.
@@ -78,18 +87,24 @@ namespace LSP.Client.Processes
         /// <returns>
         ///     A <see cref="Task"/> representing the operation.
         /// </returns>
-        public override Task Start()
+        public override async Task Start()
         {
             ServerExitCompletion = new TaskCompletionSource<object>();
 
-            ServerInputStream = new AnonymousPipeServerStream(PipeDirection.Out, HandleInheritability.None, bufferSize: 1024);
-            ServerOutputStream = new AnonymousPipeServerStream(PipeDirection.In, HandleInheritability.None, bufferSize: 1024);
-            ClientInputStream = new AnonymousPipeClientStream(PipeDirection.Out, ServerOutputStream.ClientSafePipeHandle);
-            ClientOutputStream = new AnonymousPipeClientStream(PipeDirection.In, ServerInputStream.ClientSafePipeHandle);
+            ServerInputStream = new NamedPipeServerStream(BaseName + "/in", PipeDirection.Out, 2, PipeTransmissionMode.Byte, PipeOptions.Asynchronous, inBufferSize: 1024, outBufferSize: 1024);
+            ServerOutputStream = new NamedPipeServerStream(BaseName + "/out", PipeDirection.In, 2, PipeTransmissionMode.Byte, PipeOptions.Asynchronous, inBufferSize: 1024, outBufferSize: 1024);
+            ClientInputStream = new NamedPipeClientStream(".", BaseName + "/out", PipeDirection.Out, PipeOptions.Asynchronous);
+            ClientOutputStream = new NamedPipeClientStream(".", BaseName + "/in", PipeDirection.In, PipeOptions.Asynchronous);
+
+            // Ensure all pipes are connected before proceeding.
+            await Task.WhenAll(
+                ServerInputStream.WaitForConnectionAsync(),
+                ServerOutputStream.WaitForConnectionAsync(),
+                ClientInputStream.ConnectAsync(),
+                ClientOutputStream.ConnectAsync()
+            );
 
             ServerStartCompletion.TrySetResult(null);
-
-            return Task.CompletedTask;
         }
 
         /// <summary>

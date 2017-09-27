@@ -8,9 +8,9 @@ using System.Threading.Tasks;
 namespace LSP.Client.Processes
 {
     /// <summary>
-    ///     An <see cref="ExternalServerProcess"/> is a <see cref="ServerProcess"/> that launches its server as an external process.
+    ///     A <see cref="StdioServerProcess"/> is a <see cref="ServerProcess"/> that launches its server as an external process and communicates with it over STDIN / STDOUT.
     /// </summary>
-    public class ExternalServerProcess
+    public class StdioServerProcess
         : ServerProcess
     {
         /// <summary>
@@ -24,7 +24,7 @@ namespace LSP.Client.Processes
         Process _serverProcess;
 
         /// <summary>
-        ///     Create a new <see cref="ExternalServerProcess"/>.
+        ///     Create a new <see cref="StdioServerProcess"/>.
         /// </summary>
         /// <param name="logger">
         ///     The logger to use.
@@ -32,7 +32,7 @@ namespace LSP.Client.Processes
         /// <param name="serverStartInfo">
         ///     A <see cref="ProcessStartInfo"/> that describes how to start the server.
         /// </param>
-        public ExternalServerProcess(ILogger logger, ProcessStartInfo serverStartInfo)
+        public StdioServerProcess(ILogger logger, ProcessStartInfo serverStartInfo)
             : base(logger)
         {
             if (serverStartInfo == null)
