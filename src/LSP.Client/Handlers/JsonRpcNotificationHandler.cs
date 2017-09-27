@@ -1,4 +1,4 @@
-﻿using JsonRpc;
+﻿using OmniSharp.Extensions.JsonRpc;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Threading.Tasks;

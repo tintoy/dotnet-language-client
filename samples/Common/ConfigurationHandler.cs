@@ -1,9 +1,9 @@
-﻿using Lsp.Protocol;
+﻿using OmniSharp.Extensions.LanguageServer.Abstractions;
+using OmniSharp.Extensions.LanguageServer.Capabilities.Client;
+using OmniSharp.Extensions.LanguageServer.Models;
+using OmniSharp.Extensions.LanguageServer.Protocol;
 using Serilog;
-using Lsp.Capabilities.Client;
-using Lsp.Models;
 using System.Threading.Tasks;
-using Lsp;
 
 namespace Common
 {

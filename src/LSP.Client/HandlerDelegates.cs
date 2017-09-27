@@ -1,4 +1,4 @@
-﻿using Lsp.Models;
+﻿using OmniSharp.Extensions.LanguageServer.Models;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -71,7 +71,7 @@ namespace LSP.Client
     /// <param name="messageType">
     ///     The log message type.
     /// </param>
-    public delegate void LogMessageHandler(string message, Lsp.Models.MessageType messageType);
+    public delegate void LogMessageHandler(string message, MessageType messageType);
 
     /// <summary>
     ///     A handler for diagnostics published by the language server.

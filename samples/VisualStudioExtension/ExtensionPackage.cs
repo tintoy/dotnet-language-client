@@ -11,7 +11,7 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Task = System.Threading.Tasks.Task;
 using System.Threading;
-using Lsp.Models;
+using OmniSharp.Extensions.LanguageServer.Models;
 
 namespace VisualStudioExtension
 {

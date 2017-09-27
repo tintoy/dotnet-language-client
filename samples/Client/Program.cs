@@ -1,5 +1,5 @@
 ﻿using Common;
-using Lsp.Capabilities.Client;
+using OmniSharp.Extensions.LanguageServer.Capabilities.Client;
 using LSP.Client;
 using Newtonsoft.Json.Linq;
 using Serilog;

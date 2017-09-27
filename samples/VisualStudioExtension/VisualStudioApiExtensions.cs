@@ -1,4 +1,4 @@
-﻿using Lsp.Models;
+﻿using OmniSharp.Extensions.LanguageServer.Models;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text;

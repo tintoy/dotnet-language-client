@@ -1,6 +1,6 @@
-﻿using Lsp.Capabilities.Client;
-using Lsp.Capabilities.Server;
-using Lsp.Models;
+﻿using OmniSharp.Extensions.LanguageServer.Capabilities.Client;
+using OmniSharp.Extensions.LanguageServer.Capabilities.Server;
+using OmniSharp.Extensions.LanguageServer.Models;
 using Serilog;
 using System;
 using System.Diagnostics;

@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using OmniSharp.Extensions.JsonRpc;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Serilog;
 using System;
@@ -9,6 +10,8 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+
+using JsonRpcMessages = OmniSharp.Extensions.JsonRpc.Server.Messages;
 
 namespace LSP.Client.Protocol
 {
@@ -479,7 +482,7 @@ namespace LSP.Client.Protocol
                             else
                                 Log.Verbose("Sent outgoing {RequestMethod} notification.", message.Method);
                         }
-                        else if (outgoing is JsonRpc.Error errorResponse)
+                        else if (outgoing is Error errorResponse)
                         {
                             Log.Verbose("Sending outgoing error response {RequestId} ({ErrorMessage})...", errorResponse.Id, errorResponse.Message);
 
@@ -838,7 +841,7 @@ namespace LSP.Client.Protocol
                 Log.Warning("Unable to dispatch incoming {RequestMethod} request {RequestId} (no handler registered).", requestMessage.Method, requestId);
 
                 _outgoing.TryAdd(
-                    new JsonRpc.Server.Messages.MethodNotFound(requestMessage.Id)
+                    new JsonRpcMessages.MethodNotFound(requestMessage.Id)
                 );
             }
 
@@ -853,8 +856,8 @@ namespace LSP.Client.Protocol
 
                     Log.Error(handlerError, "{RequestMethod} request {RequestId} failed (unexpected error raised by handler).", requestMessage.Method, requestId);
 
-                    _outgoing.TryAdd(new JsonRpc.Error(requestId,
-                        new JsonRpc.Server.Messages.ErrorMessage(
+                    _outgoing.TryAdd(new Error(requestId,
+                        new JsonRpcMessages.ErrorMessage(
                             code: 500,
                             message: "Error processing request: " + handlerError.Message,
                             data: handlerError.ToString()
@@ -909,7 +912,7 @@ namespace LSP.Client.Protocol
                 Log.Warning("Received invalid request cancellation message {MessageId} (missing 'id' parameter).", requestMessage.Id);
 
                 _outgoing.TryAdd(
-                    new JsonRpc.Server.Messages.InvalidParams(requestMessage.Id)
+                    new JsonRpcMessages.InvalidParams(requestMessage.Id)
                 );
             }
         }

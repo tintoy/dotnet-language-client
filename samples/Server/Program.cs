@@ -1,5 +1,5 @@
 ﻿using Common;
-using Lsp;
+using OmniSharp.Extensions.LanguageServer;
 using Serilog;
 using Serilog.Events;
 using System;

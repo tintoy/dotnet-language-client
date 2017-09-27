@@ -1,4 +1,5 @@
-﻿using System;
+﻿using OmniSharp.Extensions.JsonRpc;
+using System;
 
 namespace LSP.Client
 {
@@ -50,12 +51,12 @@ namespace LSP.Client
         ///     The name of the notification method to handle.
         /// </param>
         /// <param name="handler">
-        ///     A JSON-RPC <see cref="JsonRpc.INotificationHandler"/> that implements the handler.
+        ///     A JSON-RPC <see cref="INotificationHandler"/> that implements the handler.
         /// </param>
         /// <returns>
         ///     An <see cref="IDisposable"/> representing the registration.
         /// </returns>
-        public static IDisposable HandleEmptyNotification(this LanguageClient languageClient, string method, JsonRpc.INotificationHandler handler)
+        public static IDisposable HandleEmptyNotification(this LanguageClient languageClient, string method, INotificationHandler handler)
         {
             if (languageClient == null)
                 throw new ArgumentNullException(nameof(languageClient));
@@ -119,12 +120,12 @@ namespace LSP.Client
         ///     The name of the notification method to handle.
         /// </param>
         /// <param name="handler">
-        ///     A JSON-RPC <see cref="JsonRpc.INotificationHandler{TNotification}"/> that implements the handler.
+        ///     A JSON-RPC <see cref="INotificationHandler{TNotification}"/> that implements the handler.
         /// </param>
         /// <returns>
         ///     An <see cref="IDisposable"/> representing the registration.
         /// </returns>
-        public static IDisposable HandleNotification<TNotification>(this LanguageClient languageClient, string method, JsonRpc.INotificationHandler<TNotification> handler)
+        public static IDisposable HandleNotification<TNotification>(this LanguageClient languageClient, string method, INotificationHandler<TNotification> handler)
         {
             if (languageClient == null)
                 throw new ArgumentNullException(nameof(languageClient));

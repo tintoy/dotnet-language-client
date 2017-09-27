@@ -1,9 +1,10 @@
-﻿using System;
+﻿using OmniSharp.Extensions.JsonRpc;
+using System;
 
 namespace LSP.Client.Handlers
 {
     /// <summary>
-    ///     The base class for message handlers based on JSON-RPC <see cref="JsonRpc.IJsonRpcHandler"/>s.
+    ///     The base class for message handlers based on JSON-RPC <see cref="IJsonRpcHandler"/>s.
     /// </summary>
     public abstract class JsonRpcHandler
         : IHandler

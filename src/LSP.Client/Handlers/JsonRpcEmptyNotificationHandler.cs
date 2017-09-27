@@ -1,4 +1,4 @@
-﻿using JsonRpc;
+﻿using OmniSharp.Extensions.JsonRpc;
 using System;
 using System.Threading.Tasks;
 

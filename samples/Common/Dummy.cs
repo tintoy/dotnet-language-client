@@ -1,6 +1,7 @@
-﻿using Lsp;
-using Lsp.Models;
-using Lsp.Protocol;
+﻿using OmniSharp.Extensions.JsonRpc;
+using OmniSharp.Extensions.LanguageServer;
+using OmniSharp.Extensions.LanguageServer.Models;
+using OmniSharp.Extensions.LanguageServer.Protocol;
 using Newtonsoft.Json;
 using Serilog;
 using System;
@@ -24,9 +25,9 @@ namespace Common
     /// <summary>
     ///     Represents a handler for the "dummy" request.
     /// </summary>
-    [JsonRpc.Method("dummy")]
+    [Method("dummy")]
     public interface IDummyRequestHandler
-        : JsonRpc.IRequestHandler<DummyParams>
+        : IRequestHandler<DummyParams>
     {
     }
 

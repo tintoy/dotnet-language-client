@@ -1,6 +1,6 @@
 ﻿using Common;
-using Lsp;
-using Lsp.Capabilities.Client;
+using OmniSharp.Extensions.LanguageServer;
+using OmniSharp.Extensions.LanguageServer.Capabilities.Client;
 using LSP.Client;
 using LSP.Client.Dispatcher;
 using LSP.Client.Processes;
@@ -166,7 +166,7 @@ namespace SingleProcess
             Log.Information("Initialising language server...");
 
             LanguageServer languageServer = new LanguageServer(input, output);
-            Task serverWasShutDown = languageServer.WasShutDown;
+            TaskCompletionSource<object> serverShutdownCompletion = new TaskCompletionSource<object>();
 
             languageServer.AddHandler(
                 new ConfigurationHandler()
@@ -179,6 +179,8 @@ namespace SingleProcess
             languageServer.Shutdown += shutdownRequested =>
             {
                 Log.Information("Language server shutdown (ShutDownRequested={ShutDownRequested}).", shutdownRequested);
+
+                serverShutdownCompletion.SetResult(null);
             };
             languageServer.Exit += exitCode =>
             {
@@ -189,9 +191,7 @@ namespace SingleProcess
 
             Log.Information("Language server initialised; waiting for shutdown...");
 
-            await Task.Delay(TimeSpan.FromSeconds(5));
-
-            await serverWasShutDown;
+            await serverShutdownCompletion.Task;
 
             Log.Information("Language server has shut down.");
         }
