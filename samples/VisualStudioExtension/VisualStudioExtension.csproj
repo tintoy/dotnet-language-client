@@ -272,6 +272,7 @@
       <IncludeOutputGroupsInVSIXLocalOnly>DebugSymbolsProjectOutputGroup%3b</IncludeOutputGroupsInVSIXLocalOnly>
     </ProjectReference>
   </ItemGroup>
+  
   <!-- Include .NET Standard facade assemblies in the VSIX (ugly, but necessary) -->
   <Target Name="IncludeNETStandardFacadeInVSIX" AfterTargets="ImplicitlyExpandNETStandardFacades">
     <ItemGroup>
@@ -282,8 +283,13 @@
       </Content>
     </ItemGroup>
   </Target>
+
   <Target Name="IncludeCopyLocalAssembliesInVSIX" BeforeTargets="GetVsixSourceItems" DependsOnTargets="ResolveReferences">
   </Target>
+
+  <!-- Fake target so "dotnet pack" doesn't fail on this project -->
+  <Target Name="Pack"></Target>
+
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>

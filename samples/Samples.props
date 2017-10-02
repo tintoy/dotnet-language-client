@@ -1,6 +1,7 @@
 <Project>
     <PropertyGroup>
         <NoWarn>IDE0016</NoWarn>
+        <IsPackable>false</IsPackable>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
 </Project>

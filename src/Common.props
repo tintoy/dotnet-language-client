@@ -3,4 +3,6 @@
     <NoWarn>IDE0016</NoWarn>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
+
+  <Import Project="../Version.props" />
 </Project>
