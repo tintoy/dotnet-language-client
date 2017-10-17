@@ -13,6 +13,7 @@ namespace LSP.Client
     using Dispatcher;
     using Handlers;
     using Logging;
+    using Newtonsoft.Json.Linq;
     using Processes;
     using Protocol;
 
@@ -211,6 +212,9 @@ namespace LSP.Client
         /// <param name="workspaceRoot">
         ///     The workspace root.
         /// </param>
+        /// <param name="initializationOptions">
+        ///     An optional <see cref="Object"/> representing additional options to send to the server.
+        /// </param>
         /// <param name="cancellationToken">
         ///     An optional <see cref="CancellationToken"/> that can be used to cancel the operation.
         /// </param>
@@ -218,11 +222,11 @@ namespace LSP.Client
         ///     A <see cref="Task"/> representing initialisation.
         /// </returns>
         /// <exception cref="InvalidOperationException">
-        ///     <see cref="Initialize(string, CancellationToken)"/> has already been called.
+        ///     <see cref="Initialize(string, object, CancellationToken)"/> has already been called.
         ///     
-        ///     <see cref="Initialize(string, CancellationToken)"/> can only be called once per <see cref="LanguageClient"/>; if you have called <see cref="Shutdown"/>, you will need to use a new <see cref="LanguageClient"/>.
+        ///     <see cref="Initialize(string, object, CancellationToken)"/> can only be called once per <see cref="LanguageClient"/>; if you have called <see cref="Shutdown"/>, you will need to use a new <see cref="LanguageClient"/>.
         /// </exception>
-        public async Task Initialize(string workspaceRoot, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task Initialize(string workspaceRoot, object initializationOptions = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (IsInitialized)
                 throw new InvalidOperationException("Client has already been initialised.");
@@ -235,7 +239,8 @@ namespace LSP.Client
                 {
                     RootPath = workspaceRoot,
                     Capabilities = ClientCapabilities,
-                    ProcessId = Process.GetCurrentProcess().Id
+                    ProcessId = Process.GetCurrentProcess().Id,
+                    InitializationOptions = initializationOptions
                 };
 
                 Log.Verbose("Sending 'initialize' message to language server...");

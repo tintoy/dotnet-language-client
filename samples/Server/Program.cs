@@ -8,6 +8,8 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
+using MSLogging = Microsoft.Extensions.Logging;
+
 namespace Server
 {
     /// <summary>
@@ -57,7 +59,11 @@ namespace Server
         {
             Log.Information("Initialising language server...");
 
-            LanguageServer languageServer = new LanguageServer(input: Console.OpenStandardInput(2048), output: Console.OpenStandardOutput(2048));
+            LanguageServer languageServer = new LanguageServer(
+                input: Console.OpenStandardInput(2048),
+                output: Console.OpenStandardOutput(2048),
+                loggerFactory: new MSLogging.LoggerFactory().AddSerilog(Log.Logger.ForContext<LanguageServer>())
+            );
             languageServer.AddHandler(
                 new ConfigurationHandler()
             );

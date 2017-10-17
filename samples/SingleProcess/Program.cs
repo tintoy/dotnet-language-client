@@ -16,6 +16,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using LanguageClient = LSP.Client.LanguageClient;
+using MSLogging = Microsoft.Extensions.Logging;
 
 namespace SingleProcess
 {
@@ -119,17 +120,20 @@ namespace SingleProcess
                     );
                 });
 
-                await client.Initialize(workspaceRoot: @"C:\Foo");
+                JObject settings = new JObject(
+                    new JProperty("setting1", true),
+                    new JProperty("setting2", "Hello")
+                );
+
+                await client.Initialize(
+                    workspaceRoot: @"C:\Foo",
+                    initializationOptions: settings
+                );
 
                 Log.Information("Client started.");
 
                 // Update server configuration.
-                client.Workspace.DidChangeConfiguration(
-                    new JObject(
-                        new JProperty("setting1", true),
-                        new JProperty("setting2", "Hello")
-                    )
-                );
+                client.Workspace.DidChangeConfiguration(settings);
 
                 // Invoke our custom handler.
                 await client.SendRequest("dummy", new DummyParams
@@ -165,7 +169,9 @@ namespace SingleProcess
 
             Log.Information("Initialising language server...");
 
-            LanguageServer languageServer = new LanguageServer(input, output);
+            LanguageServer languageServer = new LanguageServer(input, output,
+                loggerFactory: new MSLogging.LoggerFactory().AddSerilog(Log.Logger.ForContext<LanguageServer>())
+            );
 
             languageServer.AddHandler(
                 new ConfigurationHandler()
@@ -173,6 +179,14 @@ namespace SingleProcess
             languageServer.AddHandler(
                 new DummyHandler(languageServer)
             );
+
+            languageServer.OnInitialize(parameters =>
+            {
+                JToken options = parameters.InitializationOptions as JToken;
+                Log.Information("Server received initialisation options: {Options}", options?.ToString(Newtonsoft.Json.Formatting.None));
+
+                return Task.CompletedTask;
+            });
 
             Log.Information("Starting language server...");
             languageServer.Shutdown += shutdownRequested =>
