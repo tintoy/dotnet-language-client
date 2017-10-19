@@ -177,6 +177,9 @@ namespace SingleProcess
                 new ConfigurationHandler()
             );
             languageServer.AddHandler(
+                new HoverHandler()
+            );
+            languageServer.AddHandler(
                 new DummyHandler(languageServer)
             );
 
