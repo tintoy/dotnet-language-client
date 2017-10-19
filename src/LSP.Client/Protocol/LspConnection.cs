@@ -481,9 +481,9 @@ namespace LSP.Client.Protocol
                             else
                                 Log.Verbose("Sent outgoing {RequestMethod} notification.", message.Method);
                         }
-                        else if (outgoing is Error errorResponse)
+                        else if (outgoing is RpcError errorResponse)
                         {
-                            Log.Verbose("Sending outgoing error response {RequestId} ({ErrorMessage})...", errorResponse.Id, errorResponse.Message);
+                            Log.Verbose("Sending outgoing error response {RequestId} ({ErrorMessage})...", errorResponse.Id, errorResponse.Error?.Message);
 
                             await SendMessage(errorResponse);
 
@@ -635,7 +635,6 @@ namespace LSP.Client.Protocol
         ///     A <see cref="Task"/> representing the operation.
         /// </returns>
         async Task SendMessage<TMessage>(TMessage message)
-            where TMessage : class
         {
             if (message == null)
                 throw new ArgumentNullException(nameof(message));
@@ -840,7 +839,7 @@ namespace LSP.Client.Protocol
                 Log.Warning("Unable to dispatch incoming {RequestMethod} request {RequestId} (no handler registered).", requestMessage.Method, requestId);
 
                 _outgoing.TryAdd(
-                    new JsonRpcMessages.MethodNotFound(requestMessage.Id)
+                    new JsonRpcMessages.MethodNotFound(requestMessage.Id, requestMessage.Method)
                 );
             }
 
@@ -855,7 +854,7 @@ namespace LSP.Client.Protocol
 
                     Log.Error(handlerError, "{RequestMethod} request {RequestId} failed (unexpected error raised by handler).", requestMessage.Method, requestId);
 
-                    _outgoing.TryAdd(new Error(requestId,
+                    _outgoing.TryAdd(new RpcError(requestId,
                         new JsonRpcMessages.ErrorMessage(
                             code: 500,
                             message: "Error processing request: " + handlerError.Message,
