@@ -1,6 +1,8 @@
 # dotnet-language-client
 .NET client for the Language Server Protocol (LSP)
 
+**NOTE:** this code has been merged into OmniSharp's [csharp-language-server-protocol](https://github.com/OmniSharp/csharp-language-server-protocol/tree/master/src/Client) (NuGet package [here](https://www.nuget.org/packages/OmniSharp.Extensions.LanguageClient/)).
+
 ## Usage
 
 ```csharp
